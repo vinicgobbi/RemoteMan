@@ -9,12 +9,83 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
+            <!--
+                Padrões visuais do app. Todas as telas usam estes estilos para manter
+                o mesmo espaçamento, tipografia e aparência dos cards.
+            -->
+
+            <!-- Margem das páginas e espaço entre blocos -->
+            <Thickness x:Key="PagePadding">32,24,32,24</Thickness>
+            <x:Double x:Key="SectionSpacing">16</x:Double>
+
+            <!-- Card: bloco de conteúdo com título -->
             <Style x:Key="CardStyle" TargetType="Border">
                 <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
                 <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="8" />
                 <Setter Property="Padding" Value="16" />
+            </Style>
+
+            <!-- Título de página -->
+            <Style x:Key="PageTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource TitleTextBlockStyle}" />
+
+            <!-- Título de card / seção -->
+            <Style x:Key="SectionTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyStrongTextBlockStyle}" />
+
+            <!-- Texto de apoio (subtítulos, descrições, valores secundários) -->
+            <Style x:Key="SecondaryTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyTextBlockStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Style>
+            <Style x:Key="SecondaryCaptionStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Style>
+
+            <!-- Botão só com ícone, sem fundo (ações secundárias em linhas e cabeçalhos) -->
+            <Style x:Key="IconButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="Padding" Value="8" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+
+            <!-- Ícone dentro de botões -->
+            <Style x:Key="ButtonIconStyle" TargetType="FontIcon">
+                <Setter Property="FontSize" Value="14" />
+            </Style>
+
+            <!-- Bolinha de status online/offline -->
+            <Style x:Key="StatusDotStyle" TargetType="Ellipse">
+                <Setter Property="Width" Value="8" />
+                <Setter Property="Height" Value="8" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+
+            <!-- Quadrado com o ícone do protocolo (cabeçalho dos detalhes) -->
+            <Style x:Key="ProtocolTileStyle" TargetType="Border">
+                <Setter Property="Width" Value="48" />
+                <Setter Property="Height" Value="48" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+            </Style>
+
+            <!-- Lista "clicável" sem seleção (dashboard) -->
+            <Style x:Key="ClickableListStyle" TargetType="ListView">
+                <Setter Property="SelectionMode" Value="None" />
+                <Setter Property="IsItemClickEnabled" Value="True" />
+                <Setter Property="Margin" Value="-16,0,-16,0" />
+                <Setter Property="Padding" Value="4,0,4,0" />
+            </Style>
+
+            <!-- O template reserva 154 px para o texto Ligado/Desligado; aqui o switch fica só com a chave -->
+            <x:Double x:Key="ToggleSwitchThemeMinWidth">0</x:Double>
+
+            <!-- ToggleSwitch usado à direita de uma linha de opção (sem textos Ligado/Desligado) -->
+            <Style x:Key="RowToggleSwitchStyle" TargetType="ToggleSwitch">
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="OnContent" Value="" />
+                <Setter Property="OffContent" Value="" />
+                <Setter Property="HorizontalAlignment" Value="Right" />
             </Style>
         </ResourceDictionary>
     </Application.Resources>

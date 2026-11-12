@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Linha de um card: rótulo (com descrição opcional) · valor · ação opcional à direita.
+    Usada no modo leitura (ex.: "Host  servidor:3389") e nas opções com ToggleSwitch.
+-->
+<UserControl
+    x:Class="RemoteMan.Controls.FieldRow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:h="using:RemoteMan.Helpers">
+
+    <Grid MinHeight="36" ColumnSpacing="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" MinWidth="{x:Bind LabelWidth, Mode=OneWay}" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel VerticalAlignment="Center">
+            <!-- com valor: rótulo discreto; sem valor (linha de opção): rótulo em destaque -->
+            <TextBlock
+                Text="{x:Bind Label, Mode=OneWay}"
+                Style="{StaticResource BodyTextBlockStyle}"
+                Foreground="{x:Bind h:Ui.LabelBrush(Value), Mode=OneWay}" />
+            <TextBlock
+                Text="{x:Bind Description, Mode=OneWay}"
+                Style="{StaticResource SecondaryCaptionStyle}"
+                TextWrapping="Wrap"
+                Visibility="{x:Bind h:Ui.VisibleIfText(Description), Mode=OneWay}" />
+        </StackPanel>
+
+        <TextBlock
+            Grid.Column="1"
+            VerticalAlignment="Center"
+            Text="{x:Bind Value, Mode=OneWay}"
+            TextWrapping="Wrap"
+            IsTextSelectionEnabled="True" />
+
+        <ContentPresenter Grid.Column="2" VerticalAlignment="Center" Content="{x:Bind Action, Mode=OneWay}" />
+    </Grid>
+</UserControl>
