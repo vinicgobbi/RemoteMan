@@ -1,10 +1,14 @@
 using Microsoft.UI.Xaml;
+using RemoteMan.ViewModels;
 
 namespace RemoteMan;
 
 public partial class App : Application
 {
-    private Window? _window;
+    /// <summary>Estado compartilhado entre as páginas (lista de conexões, seleção, status).</summary>
+    public static MainViewModel ViewModel { get; private set; } = null!;
+
+    public static MainWindow MainWindow { get; private set; } = null!;
 
     public App()
     {
@@ -13,7 +17,8 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        _window = new MainWindow();
-        _window.Activate();
+        ViewModel = new MainViewModel();
+        MainWindow = new MainWindow();
+        MainWindow.Activate();
     }
 }

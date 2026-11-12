@@ -1,18 +1,18 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using RemoteMan.Models;
 using RemoteMan.ViewModels;
+using RemoteMan.Views;
 using Windows.Graphics;
-using Windows.Storage.Pickers;
 
 namespace RemoteMan;
 
 public sealed partial class MainWindow : Window
 {
-    public MainViewModel ViewModel { get; } = new();
+    public MainViewModel ViewModel => App.ViewModel;
 
     public MainWindow()
     {
@@ -22,83 +22,35 @@ public sealed partial class MainWindow : Window
         SetTitleBar(AppTitleBar);
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
         SystemBackdrop = new MicaBackdrop();
-        AppWindow.Resize(new SizeInt32(1200, 780));
-
-        ConnectionsSource.Source = ViewModel.Groups;
-        ConnectionList.ItemsSource = ConnectionsSource.View;
-
-        ViewModel.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(MainViewModel.Selected))
-                SyncListSelection();
-        };
+        AppWindow.Resize(new SizeInt32(1280, 820));
 
         Closed += (_, _) => ViewModel.SaveAll();
+
+        // tela inicial: dashboard
+        NavView.SelectedItem = HomeNavItem;
     }
 
-    private void SyncListSelection()
-    {
-        if (ReferenceEquals(ConnectionList.SelectedItem, ViewModel.Selected))
-            return;
+    /// <summary>Vai para o dashboard.</summary>
+    public void ShowDashboard() => NavView.SelectedItem = HomeNavItem;
 
-        ConnectionList.SelectedItem = ViewModel.Selected;
-        if (ViewModel.Selected is not null)
-            ConnectionList.ScrollIntoView(ViewModel.Selected);
+    /// <summary>Vai para a tela de conexões, opcionalmente já com uma conexão selecionada.</summary>
+    public void ShowConnections(Connection? select = null)
+    {
+        if (select is not null)
+            ViewModel.Reveal(select);
+        NavView.SelectedItem = ConnectionsNavItem;
     }
 
-    private void ConnectionList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
-        if (ViewModel.IsRefreshing)
-            return;
-        ViewModel.Selected = ConnectionList.SelectedItem as Connection;
-    }
-
-    private void ConnectionList_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
-    {
-        if (ViewModel.Selected is not null)
-            ViewModel.ConnectCommand.Execute(null);
-    }
-
-    private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
-    {
-        if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
-            ViewModel.SearchText = sender.Text;
-    }
-
-    private void SaveAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
-    {
-        ViewModel.SaveCommand.Execute(null);
-        args.Handled = true;
-    }
-
-    private async void Delete_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel.Selected is not { } c)
-            return;
-
-        var dialog = new ContentDialog
+        var tag = (args.SelectedItem as NavigationViewItem)?.Tag as string;
+        var page = tag switch
         {
-            XamlRoot = Content.XamlRoot,
-            Title = "Excluir conexão",
-            Content = $"Excluir \"{c.Name}\"? A senha salva também será removida.",
-            PrimaryButtonText = "Excluir",
-            CloseButtonText = "Cancelar",
-            DefaultButton = ContentDialogButton.Close,
+            "connections" => typeof(ConnectionsPage),
+            _ => typeof(DashboardPage),
         };
 
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
-            ViewModel.DeleteSelected();
-    }
-
-    private async void BrowseKey_Click(object sender, RoutedEventArgs e)
-    {
-        var picker = new FileOpenPicker { ViewMode = PickerViewMode.List };
-        picker.FileTypeFilter.Add("*");
-        // app não empacotado: o picker precisa saber qual é a janela dona
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
-
-        var file = await picker.PickSingleFileAsync();
-        if (file is not null && ViewModel.Selected is { } c)
-            c.KeyFile = file.Path;
+        if (ContentFrame.CurrentSourcePageType != page)
+            ContentFrame.Navigate(page, null, new EntranceNavigationTransitionInfo());
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Media;
 using RemoteMan.Models;
 
 namespace RemoteMan.Helpers;
@@ -26,6 +27,60 @@ public static class Ui
     public static Visibility SshOnly(ConnectionProtocol p) => VisibleIf(p == ConnectionProtocol.Ssh);
 
     public static bool Not(bool b) => !b;
+
+    public static Visibility VisibleIfAny(int count) => VisibleIf(count > 0);
+    public static Visibility CollapsedIfAny(int count) => VisibleIf(count == 0);
+
+    public static string FavoriteGlyph(bool isFavorite) => isFavorite ? "" : ""; // estrela cheia / vazia
+    public static string FavoriteTooltip(bool isFavorite) => isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos";
+
+    // --- Status online/offline ---
+    public static Brush StatusBrush(ReachabilityStatus s) => (Brush)Application.Current.Resources[s switch
+    {
+        ReachabilityStatus.Online => "SystemFillColorSuccessBrush",
+        ReachabilityStatus.Offline => "SystemFillColorCriticalBrush",
+        ReachabilityStatus.Checking => "SystemFillColorCautionBrush",
+        _ => "ControlStrongFillColorDisabledBrush",
+    }];
+
+    public static string StatusText(ReachabilityStatus s) => s switch
+    {
+        ReachabilityStatus.Online => "Online",
+        ReachabilityStatus.Offline => "Offline",
+        ReachabilityStatus.Checking => "Verificando…",
+        _ => "Não verificado",
+    };
+
+    // --- Datas e contagens ---
+    public static string RelativeTime(DateTime? when)
+    {
+        if (when is not { } t)
+            return "Nunca";
+
+        var diff = DateTime.Now - t;
+        if (diff.TotalMinutes < 1) return "agora mesmo";
+        if (diff.TotalMinutes < 60) return $"há {(int)diff.TotalMinutes} min";
+        if (diff.TotalHours < 24) return $"há {(int)diff.TotalHours} h";
+        if (diff.TotalDays < 2) return "ontem";
+        if (diff.TotalDays < 30) return $"há {(int)diff.TotalDays} dias";
+        return t.ToString("dd/MM/yyyy");
+    }
+
+    public static string LastCheckText(DateTime? when, bool checking) =>
+        checking ? "Verificando agora…" : when is null ? "Ainda não verificado" : $"Verificado {RelativeTime(when)}";
+
+    public static string UsageText(int count) => count == 1 ? "1 vez" : $"{count} vezes";
+
+    public static string GroupsText(int count) => count == 1 ? "em 1 grupo" : $"em {count} grupos";
+
+    public static string Number(int n) => n.ToString();
+
+    public static string ConnectionDetail(ConnectionProtocol p, DateTime? when) =>
+        $"{ProtocolName(p)} · {RelativeTime(when)}";
+
+    // --- Ambiente ---
+    public static string OrNotFound(string? path) => path ?? "Não encontrado";
+    public static string FoundText(bool found) => found ? "Instalado" : "Não encontrado (será usada uma janela de console)";
 
     /// <summary>Campos de usuário/senha: escondidos quando o RDP usa o usuário do Windows.</summary>
     public static Visibility ManualCredentials(ConnectionProtocol p, bool useWindows) =>

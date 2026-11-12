@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="RemoteMan.Views.DashboardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:m="using:RemoteMan.Models"
+    xmlns:h="using:RemoteMan.Helpers"
+    NavigationCacheMode="Required">
+
+    <Page.Resources>
+        <Style x:Key="StatValueStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="32" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style x:Key="SecondaryCaptionStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style x:Key="DashboardListStyle" TargetType="ListView">
+            <Setter Property="SelectionMode" Value="None" />
+            <Setter Property="IsItemClickEnabled" Value="True" />
+            <Setter Property="Margin" Value="-12,0,-12,0" />
+        </Style>
+
+        <!-- Linha com status, nome, quando e botão de conectar -->
+        <DataTemplate x:Key="RecentTemplate" x:DataType="m:Connection">
+            <Grid Padding="0,6" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                         Fill="{x:Bind h:Ui.StatusBrush(Status), Mode=OneWay}"
+                         ToolTipService.ToolTip="{x:Bind h:Ui.StatusText(Status), Mode=OneWay}" />
+                <FontIcon Grid.Column="1" Glyph="{x:Bind h:Ui.ProtocolGlyph(Protocol)}" FontSize="16" />
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind h:Ui.Endpoint(Host, Port), Mode=OneWay}" Style="{StaticResource SecondaryCaptionStyle}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <TextBlock Grid.Column="3" VerticalAlignment="Center" Style="{StaticResource SecondaryCaptionStyle}"
+                           Text="{x:Bind h:Ui.RelativeTime(LastConnected), Mode=OneWay}" />
+                <Button Grid.Column="4" Tag="{x:Bind}" Click="ConnectItem_Click" ToolTipService.ToolTip="Conectar">
+                    <FontIcon Glyph="&#xE768;" FontSize="12" />
+                </Button>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Linha com status, nome e botão de conectar -->
+        <DataTemplate x:Key="FavoriteTemplate" x:DataType="m:Connection">
+            <Grid Padding="0,6" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                         Fill="{x:Bind h:Ui.StatusBrush(Status), Mode=OneWay}"
+                         ToolTipService.ToolTip="{x:Bind h:Ui.StatusText(Status), Mode=OneWay}" />
+                <FontIcon Grid.Column="1" Glyph="{x:Bind h:Ui.ProtocolGlyph(Protocol)}" FontSize="16" />
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind h:Ui.Endpoint(Host, Port), Mode=OneWay}" Style="{StaticResource SecondaryCaptionStyle}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <Button Grid.Column="3" Tag="{x:Bind}" Click="ConnectItem_Click" ToolTipService.ToolTip="Conectar">
+                    <FontIcon Glyph="&#xE768;" FontSize="12" />
+                </Button>
+            </Grid>
+        </DataTemplate>
+
+        <!-- Linha com nome e número de usos -->
+        <DataTemplate x:Key="MostUsedTemplate" x:DataType="m:Connection">
+            <Grid Padding="0,6" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon Glyph="{x:Bind h:Ui.ProtocolGlyph(Protocol)}" FontSize="16" />
+                <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Text="{x:Bind h:Ui.UsageText(ConnectCount), Mode=OneWay}" Style="{StaticResource SecondaryCaptionStyle}" VerticalAlignment="Center" />
+            </Grid>
+        </DataTemplate>
+
+        <!-- Linha com status textual -->
+        <DataTemplate x:Key="StatusTemplate" x:DataType="m:Connection">
+            <Grid Padding="0,6" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Ellipse Width="10" Height="10" VerticalAlignment="Center" Fill="{x:Bind h:Ui.StatusBrush(Status), Mode=OneWay}" />
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind h:Ui.Summary(Protocol, Host, Port), Mode=OneWay}" Style="{StaticResource SecondaryCaptionStyle}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" VerticalAlignment="Center" Style="{StaticResource SecondaryCaptionStyle}"
+                           Text="{x:Bind h:Ui.StatusText(Status), Mode=OneWay}" />
+            </Grid>
+        </DataTemplate>
+    </Page.Resources>
+
+    <ScrollViewer>
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup>
+                <VisualState x:Name="Wide">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="1100" />
+                    </VisualState.StateTriggers>
+                </VisualState>
+                <VisualState x:Name="Narrow">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <!-- coluna lateral desce para baixo da principal -->
+                        <Setter Target="SideColumn.Width" Value="0" />
+                        <Setter Target="SidePanel.(Grid.Column)" Value="0" />
+                        <Setter Target="SidePanel.(Grid.Row)" Value="1" />
+                        <Setter Target="SidePanel.Margin" Value="0,20,0,0" />
+                        <Setter Target="ColumnsGrid.ColumnSpacing" Value="0" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
+        <StackPanel Padding="32,24,32,32" Spacing="20" MaxWidth="1280">
+
+            <!-- Cabeçalho -->
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="Início" Style="{ThemeResource TitleTextBlockStyle}" />
+                    <TextBlock Text="{x:Bind ViewModel.Greeting, Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Button Command="{x:Bind ViewModel.CheckStatusCommand}" IsEnabled="{x:Bind h:Ui.Not(ViewModel.IsChecking), Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                            <TextBlock Text="Verificar status" />
+                        </StackPanel>
+                    </Button>
+                    <DropDownButton Style="{StaticResource AccentButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE710;" FontSize="14" />
+                            <TextBlock Text="Nova conexão" />
+                        </StackPanel>
+                        <DropDownButton.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                <MenuFlyoutItem Text="Área de trabalho remota (RDP)" Click="NewRdp_Click">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE7F4;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutItem Text="Terminal SSH" Click="NewSsh_Click">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE756;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                            </MenuFlyout>
+                        </DropDownButton.Flyout>
+                    </DropDownButton>
+                </StackPanel>
+            </Grid>
+
+            <!-- Estado vazio -->
+            <Border Style="{StaticResource CardStyle}" Padding="32" Visibility="{x:Bind h:Ui.CollapsedIfAny(ViewModel.TotalCount), Mode=OneWay}">
+                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <FontIcon Glyph="&#xE703;" FontSize="40" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <TextBlock Text="Nenhuma conexão cadastrada" Style="{ThemeResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" />
+                    <TextBlock Text="Use “Nova conexão” para adicionar seu primeiro servidor RDP ou SSH." Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <!-- Resumo -->
+            <Grid ColumnSpacing="12" Visibility="{x:Bind h:Ui.VisibleIfAny(ViewModel.TotalCount), Mode=OneWay}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE703;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="Conexões" Style="{StaticResource SecondaryCaptionStyle}" />
+                        </StackPanel>
+                        <TextBlock Text="{x:Bind h:Ui.Number(ViewModel.TotalCount), Mode=OneWay}" Style="{StaticResource StatValueStyle}" />
+                        <TextBlock Text="{x:Bind h:Ui.GroupsText(ViewModel.GroupCount), Mode=OneWay}" Style="{StaticResource SecondaryCaptionStyle}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE7F4;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="RDP" Style="{StaticResource SecondaryCaptionStyle}" />
+                        </StackPanel>
+                        <TextBlock Text="{x:Bind h:Ui.Number(ViewModel.RdpCount), Mode=OneWay}" Style="{StaticResource StatValueStyle}" />
+                        <TextBlock Text="Área de trabalho remota" Style="{StaticResource SecondaryCaptionStyle}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE756;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="SSH" Style="{StaticResource SecondaryCaptionStyle}" />
+                        </StackPanel>
+                        <TextBlock Text="{x:Bind h:Ui.Number(ViewModel.SshCount), Mode=OneWay}" Style="{StaticResource StatValueStyle}" />
+                        <TextBlock Text="Terminal" Style="{StaticResource SecondaryCaptionStyle}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="3" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE774;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="Online" Style="{StaticResource SecondaryCaptionStyle}" />
+                        </StackPanel>
+                        <TextBlock Text="{x:Bind ViewModel.OnlineSummary, Mode=OneWay}" Style="{StaticResource StatValueStyle}" />
+                        <TextBlock Text="{x:Bind ViewModel.StatusDetail, Mode=OneWay}" Style="{StaticResource SecondaryCaptionStyle}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Colunas -->
+            <Grid x:Name="ColumnsGrid" ColumnSpacing="20" Visibility="{x:Bind h:Ui.VisibleIfAny(ViewModel.TotalCount), Mode=OneWay}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition x:Name="SideColumn" Width="2*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- Coluna principal -->
+                <StackPanel Spacing="20">
+
+                    <!-- Última conexão -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="Última conexão" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+
+                            <TextBlock
+                                Text="Nenhuma conexão realizada ainda."
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Visibility="{x:Bind h:Ui.CollapsedIfNotNull(ViewModel.LastConnection), Mode=OneWay}" />
+
+                            <Grid ColumnSpacing="16" Visibility="{x:Bind h:Ui.VisibleIfNotNull(ViewModel.LastConnection), Mode=OneWay}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="56" Height="56" CornerRadius="8" Background="{ThemeResource AccentFillColorDefaultBrush}">
+                                    <FontIcon
+                                        Glyph="{x:Bind h:Ui.ProtocolGlyph(ViewModel.LastConnection.Protocol), Mode=OneWay}"
+                                        FontSize="24"
+                                        Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="{x:Bind ViewModel.LastConnection.Name, Mode=OneWay}" Style="{ThemeResource SubtitleTextBlockStyle}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{x:Bind h:Ui.Endpoint(ViewModel.LastConnection.Host, ViewModel.LastConnection.Port), Mode=OneWay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Ellipse Width="8" Height="8" VerticalAlignment="Center" Fill="{x:Bind h:Ui.StatusBrush(ViewModel.LastConnection.Status), Mode=OneWay}" />
+                                        <TextBlock Style="{StaticResource SecondaryCaptionStyle}" Text="{x:Bind h:Ui.ConnectionDetail(ViewModel.LastConnection.Protocol, ViewModel.LastConnection.LastConnected), Mode=OneWay}" />
+                                    </StackPanel>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <Button Style="{StaticResource AccentButtonStyle}" Click="ReconnectLast_Click">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon Glyph="&#xE768;" FontSize="14" />
+                                            <TextBlock Text="Reconectar" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="EditLast_Click" ToolTipService.ToolTip="Editar">
+                                        <FontIcon Glyph="&#xE70F;" FontSize="14" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Recentes -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Recentes" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                            <TextBlock
+                                Text="As conexões abertas aparecem aqui."
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Visibility="{x:Bind h:Ui.CollapsedIfAny(ViewModel.Recent.Count), Mode=OneWay}" />
+                            <ListView
+                                Style="{StaticResource DashboardListStyle}"
+                                ItemsSource="{x:Bind ViewModel.Recent}"
+                                ItemTemplate="{StaticResource RecentTemplate}"
+                                ItemClick="Item_Click" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Status dos servidores -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel Spacing="8">
+                            <Grid>
+                                <TextBlock Text="Status dos servidores" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                    <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsChecking, Mode=OneWay}" />
+                                    <TextBlock Style="{StaticResource SecondaryCaptionStyle}" VerticalAlignment="Center"
+                                               Text="{x:Bind h:Ui.LastCheckText(ViewModel.LastCheckedAt, ViewModel.IsChecking), Mode=OneWay}" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock
+                                Text="Testa a porta TCP de cada servidor (3389 para RDP, 22 para SSH, ou a porta configurada)."
+                                Style="{StaticResource SecondaryCaptionStyle}"
+                                TextWrapping="Wrap" />
+                            <ListView
+                                Style="{StaticResource DashboardListStyle}"
+                                MaxHeight="360"
+                                ItemsSource="{x:Bind ViewModel.All}"
+                                ItemTemplate="{StaticResource StatusTemplate}"
+                                ItemClick="Item_Click" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Coluna lateral -->
+                <StackPanel x:Name="SidePanel" Grid.Column="1" Spacing="20">
+
+                    <!-- Favoritos -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel Spacing="8">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE735;" FontSize="14" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                                <TextBlock Text="Favoritos" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                            </StackPanel>
+                            <TextBlock
+                                Text="Marque conexões com a estrela na tela Conexões para acessá-las rápido aqui."
+                                TextWrapping="Wrap"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Visibility="{x:Bind h:Ui.CollapsedIfAny(ViewModel.Favorites.Count), Mode=OneWay}" />
+                            <ListView
+                                Style="{StaticResource DashboardListStyle}"
+                                ItemsSource="{x:Bind ViewModel.Favorites}"
+                                ItemTemplate="{StaticResource FavoriteTemplate}"
+                                ItemClick="Item_Click" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Mais usadas -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Mais usadas" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                            <TextBlock
+                                Text="Ainda sem histórico de uso."
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Visibility="{x:Bind h:Ui.CollapsedIfAny(ViewModel.MostUsed.Count), Mode=OneWay}" />
+                            <ListView
+                                Style="{StaticResource DashboardListStyle}"
+                                ItemsSource="{x:Bind ViewModel.MostUsed}"
+                                ItemTemplate="{StaticResource MostUsedTemplate}"
+                                ItemClick="Item_Click" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Ambiente -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="Ambiente" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Usuário do Windows" Style="{StaticResource SecondaryCaptionStyle}" />
+                                <TextBlock Text="{x:Bind ViewModel.WindowsUser}" IsTextSelectionEnabled="True" />
+                            </StackPanel>
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="OpenSSH" Style="{StaticResource SecondaryCaptionStyle}" />
+                                <TextBlock Text="{x:Bind h:Ui.OrNotFound(ViewModel.SshPath)}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                            </StackPanel>
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Windows Terminal" Style="{StaticResource SecondaryCaptionStyle}" />
+                                <TextBlock Text="{x:Bind h:Ui.FoundText(ViewModel.HasWindowsTerminal)}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Arquivo de conexões" Style="{StaticResource SecondaryCaptionStyle}" />
+                                <TextBlock Text="{x:Bind ViewModel.DataFilePath}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</Page>
