@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace RemoteMan.Models;
@@ -6,6 +7,15 @@ public enum ConnectionProtocol
 {
     Rdp,
     Ssh,
+}
+
+/// <summary>Resultado do teste de porta TCP (só em memória, não é salvo).</summary>
+public enum ReachabilityStatus
+{
+    Unknown,
+    Checking,
+    Online,
+    Offline,
 }
 
 /// <summary>
@@ -42,6 +52,11 @@ public partial class Connection : ObservableObject
     [ObservableProperty] public partial string Username { get; set; }
     [ObservableProperty] public partial string Notes { get; set; }
     [ObservableProperty] public partial DateTime? LastConnected { get; set; }
+    [ObservableProperty] public partial int ConnectCount { get; set; }
+    [ObservableProperty] public partial bool IsFavorite { get; set; }
+
+    [JsonIgnore]
+    [ObservableProperty] public partial ReachabilityStatus Status { get; set; }
 
     // --- RDP ---
     /// <summary>Conecta com o usuário logado no Windows em vez de usuário/senha salvos.</summary>

@@ -35,6 +35,11 @@ public partial class MainViewModel : ObservableObject
 
     public ObservableCollection<ConnectionGroup> Groups { get; } = [];
 
+    /// <summary>Todas as conexões (sem filtro de busca), usadas pelo dashboard.</summary>
+    public IReadOnlyList<Connection> Connections => _connections;
+
+    public string DataFilePath => _store.FilePath;
+
     /// <summary>True enquanto a lista é reconstruída (a View ignora mudanças de seleção nesse período).</summary>
     public bool IsRefreshing { get; private set; }
 
@@ -143,18 +148,22 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Connect()
+    private void Connect() => ConnectTo(Selected);
+
+    /// <summary>Abre a conexão informada (usada pelo editor e pelos cards do dashboard).</summary>
+    public void ConnectTo(Connection? c)
     {
-        if (Selected is not { } c)
+        if (c is null)
             return;
 
         if (string.IsNullOrWhiteSpace(c.Host))
         {
-            ShowStatus("Informe o host antes de conectar.", InfoBarSeverity.Warning);
+            ShowStatus($"Informe o host de \"{c.Name}\" antes de conectar.", InfoBarSeverity.Warning);
             return;
         }
 
-        if (!TryPersistPendingPassword(c))
+        // a senha digitada no editor pertence à conexão selecionada, não necessariamente a "c"
+        if (Selected is { } editing && !TryPersistPendingPassword(editing))
             return;
 
         try
@@ -182,12 +191,31 @@ public partial class MainViewModel : ObservableObject
             }
 
             c.LastConnected = DateTime.Now;
+            c.ConnectCount++;
             SaveToDisk();
         }
         catch (Exception ex)
         {
             ShowStatus($"Falha ao abrir a conexão: {ex.Message}", InfoBarSeverity.Error);
         }
+    }
+
+    [RelayCommand]
+    private void ToggleFavorite()
+    {
+        if (Selected is not { } c)
+            return;
+
+        c.IsFavorite = !c.IsFavorite;
+        SaveToDisk();
+    }
+
+    /// <summary>Seleciona uma conexão garantindo que ela apareça na lista (limpa a busca).</summary>
+    public void Reveal(Connection c)
+    {
+        if (!Groups.Any(g => g.Contains(c)))
+            SearchText = string.Empty;
+        Selected = c;
     }
 
     [RelayCommand]
@@ -302,7 +330,7 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(Selected));
     }
 
-    private void ShowStatus(string message, InfoBarSeverity severity)
+    public void ShowStatus(string message, InfoBarSeverity severity)
     {
         StatusMessage = message;
         StatusSeverity = severity;
