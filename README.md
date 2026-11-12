@@ -8,13 +8,13 @@ Windows, nunca em arquivo.
 
 ## Funcionalidades
 
-- **Dashboard inicial** com:
-  - resumo das conexões (total, RDP, SSH e grupos);
-  - última conexão realizada, com botão para reconectar;
-  - conexões recentes, favoritas e mais usadas;
-  - status online/offline de cada servidor (teste de porta TCP);
-  - informações do ambiente: usuário do Windows, OpenSSH, Windows Terminal e caminho do arquivo de dados.
+- **Início** com resumo do status dos servidores (online/offline), favoritos e conexões recentes.
 - **Lista de conexões** agrupada, com busca por nome, host, grupo ou usuário.
+- **Detalhes da conexão** em modo leitura, com botões **Conectar** e **Editar**. No modo edição, as
+  alterações são salvas automaticamente (Ctrl+S grava na hora).
+- **Configurações**: usuário do Windows, OpenSSH, Windows Terminal e caminho do arquivo de dados.
+- Em todas as listas, clicar numa conexão abre os detalhes e o botão ▶ conecta. Na tela Conexões, o
+  duplo clique também conecta.
 - **RDP**
   - Abre o `mstsc` com um arquivo `.rdp` gerado na hora.
   - Login automático com a senha salva (credencial `TERMSRV/host`).
@@ -23,7 +23,7 @@ Windows, nunca em arquivo.
 - **SSH**
   - Abre uma nova aba no Windows Terminal ou, se ele não estiver instalado, uma janela do `ssh.exe`.
   - Suporta porta personalizada e chave privada (`-i`).
-- **Favoritos**, duplicar e excluir conexões, notas livres por conexão.
+- **Favoritos**, contador de uso, duplicar e excluir conexões, notas livres por conexão.
 
 ## Requisitos
 
@@ -74,21 +74,26 @@ As senhas são protegidas pelo DPAPI do usuário do Windows: só a sua conta, ne
 - **Credencial `TERMSRV/host`:** ao conectar via RDP com senha salva, a credencial fica no Windows depois da
   conexão, como acontece com o "Lembrar de mim" do próprio `mstsc`.
 - **Status online/offline:** o dashboard testa a porta TCP de cada servidor (até 16 ao mesmo tempo, limite
-  de 2 s cada). O teste roda ao abrir o dashboard se a última verificação tiver mais de 1 minuto, ou pelo
-  botão **Verificar status**. Isso gera tráfego de rede para os servidores cadastrados.
+  de 2 s cada). O teste roda ao abrir o Início ou a tela Conexões se a última verificação tiver mais de
+  1 minuto, ou pelo botão **Verificar status** (⟳ na tela Conexões). Isso gera tráfego de rede para os
+  servidores cadastrados.
 
 ## Estrutura do projeto
 
 ```
 RemoteMan/
-├── App.xaml(.cs)            # inicialização e estado compartilhado
+├── App.xaml(.cs)            # inicialização, estado compartilhado e estilos comuns
 ├── MainWindow.xaml(.cs)     # janela com barra de título e menu de navegação
 ├── Views/
 │   ├── DashboardPage        # tela inicial
-│   └── ConnectionsPage      # lista e editor de conexões
+│   ├── ConnectionsPage      # lista, detalhes e editor de conexões
+│   └── SettingsPage         # ambiente e informações do app
+├── Controls/
+│   ├── ConnectionItem       # linha padrão de conexão usada em todas as listas
+│   └── FieldRow             # linha "rótulo · valor · ação" dos cards
 ├── ViewModels/
-│   ├── MainViewModel        # conexões, seleção, comandos (CommunityToolkit.Mvvm)
-│   ├── DashboardViewModel   # dados do dashboard e verificação de status
+│   ├── MainViewModel        # conexões, seleção, edição, salvamento e status (CommunityToolkit.Mvvm)
+│   ├── DashboardViewModel   # favoritos, recentes e resumo do Início
 │   └── ConnectionGroup      # agrupamento da lista
 ├── Models/
 │   └── Connection           # modelo de uma conexão
