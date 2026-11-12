@@ -38,6 +38,13 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
+            <NavigationView.FooterMenuItems>
+                <NavigationViewItem x:Name="SettingsNavItem" Content="Configurações" Tag="settings">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE713;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.FooterMenuItems>
 
             <Grid>
                 <Grid.RowDefinitions>
@@ -50,7 +57,7 @@
                 <!-- Mensagens de status (comuns a todas as páginas) -->
                 <InfoBar
                     Grid.Row="1"
-                    Margin="24,0,24,16"
+                    Margin="32,0,32,16"
                     IsOpen="{x:Bind ViewModel.IsStatusOpen, Mode=TwoWay}"
                     Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
                     Severity="{x:Bind ViewModel.StatusSeverity, Mode=OneWay}" />

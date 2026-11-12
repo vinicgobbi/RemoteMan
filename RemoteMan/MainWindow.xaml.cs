@@ -47,6 +47,7 @@ public sealed partial class MainWindow : Window
         var page = tag switch
         {
             "connections" => typeof(ConnectionsPage),
+            "settings" => typeof(SettingsPage),
             _ => typeof(DashboardPage),
         };
 

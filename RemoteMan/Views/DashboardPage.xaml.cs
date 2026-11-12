@@ -19,28 +19,10 @@ public sealed partial class DashboardPage : Page
     {
         base.OnNavigatedTo(e);
         ViewModel.Refresh();
-        ViewModel.CheckStatusIfStale();
+        ViewModel.Main.CheckStatusIfStale();
     }
 
-    private void Connect(Connection? c)
-    {
-        App.ViewModel.ConnectTo(c);
-        ViewModel.Refresh();
-    }
-
-    private void ConnectItem_Click(object sender, RoutedEventArgs e) =>
-        Connect((sender as FrameworkElement)?.Tag as Connection);
-
-    private void ReconnectLast_Click(object sender, RoutedEventArgs e) =>
-        Connect(ViewModel.LastConnection);
-
-    private void EditLast_Click(object sender, RoutedEventArgs e)
-    {
-        if (ViewModel.LastConnection is { } c)
-            App.MainWindow.ShowConnections(c);
-    }
-
-    /// <summary>Clique numa linha de qualquer lista: abre a conexão para edição.</summary>
+    /// <summary>Clique numa linha: abre os detalhes da conexão (o botão ▶ da linha conecta).</summary>
     private void Item_Click(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is Connection c)

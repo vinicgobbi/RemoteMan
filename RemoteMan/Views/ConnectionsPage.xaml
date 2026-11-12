@@ -6,6 +6,7 @@
     xmlns:m="using:RemoteMan.Models"
     xmlns:vm="using:RemoteMan.ViewModels"
     xmlns:h="using:RemoteMan.Helpers"
+    xmlns:c="using:RemoteMan.Controls"
     NavigationCacheMode="Required">
 
     <Page.Resources>
@@ -18,38 +19,53 @@
         </Grid.KeyboardAccelerators>
 
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="320" />
+            <ColumnDefinition Width="340" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
         <!-- ===== Painel esquerdo: lista ===== -->
-        <Grid Padding="12,12,12,12" RowSpacing="12">
+        <Grid Padding="16,16,8,0" RowSpacing="12">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <DropDownButton HorizontalAlignment="Stretch" Style="{StaticResource AccentButtonStyle}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon Glyph="&#xE710;" FontSize="14" />
-                    <TextBlock Text="Nova conexão" />
-                </StackPanel>
-                <DropDownButton.Flyout>
-                    <MenuFlyout Placement="Bottom">
-                        <MenuFlyoutItem Text="Área de trabalho remota (RDP)" Command="{x:Bind ViewModel.NewRdpCommand}">
-                            <MenuFlyoutItem.Icon>
-                                <FontIcon Glyph="&#xE7F4;" />
-                            </MenuFlyoutItem.Icon>
-                        </MenuFlyoutItem>
-                        <MenuFlyoutItem Text="Terminal SSH" Command="{x:Bind ViewModel.NewSshCommand}">
-                            <MenuFlyoutItem.Icon>
-                                <FontIcon Glyph="&#xE756;" />
-                            </MenuFlyoutItem.Icon>
-                        </MenuFlyoutItem>
-                    </MenuFlyout>
-                </DropDownButton.Flyout>
-            </DropDownButton>
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <DropDownButton HorizontalAlignment="Stretch" Style="{StaticResource AccentButtonStyle}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE710;" Style="{StaticResource ButtonIconStyle}" />
+                        <TextBlock Text="Nova conexão" />
+                    </StackPanel>
+                    <DropDownButton.Flyout>
+                        <MenuFlyout Placement="Bottom">
+                            <MenuFlyoutItem Text="Área de trabalho remota (RDP)" Command="{x:Bind ViewModel.NewRdpCommand}">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE7F4;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem Text="Terminal SSH" Command="{x:Bind ViewModel.NewSshCommand}">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE756;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                        </MenuFlyout>
+                    </DropDownButton.Flyout>
+                </DropDownButton>
+
+                <Button
+                    Grid.Column="1"
+                    Command="{x:Bind ViewModel.CheckStatusCommand}"
+                    IsEnabled="{x:Bind h:Ui.Not(ViewModel.IsChecking), Mode=OneWay}"
+                    ToolTipService.ToolTip="{x:Bind h:Ui.LastCheckText(ViewModel.LastCheckedAt, ViewModel.IsChecking), Mode=OneWay}">
+                    <FontIcon Glyph="&#xE72C;" Style="{StaticResource ButtonIconStyle}" />
+                </Button>
+            </Grid>
 
             <AutoSuggestBox
                 Grid.Row="1"
@@ -61,6 +77,7 @@
             <ListView
                 x:Name="ConnectionList"
                 Grid.Row="2"
+                Margin="-8,0,0,0"
                 SelectionMode="Single"
                 SelectionChanged="ConnectionList_SelectionChanged"
                 DoubleTapped="ConnectionList_DoubleTapped">
@@ -68,41 +85,14 @@
                     <GroupStyle>
                         <GroupStyle.HeaderTemplate>
                             <DataTemplate x:DataType="vm:ConnectionGroup">
-                                <TextBlock Text="{x:Bind Key}" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{x:Bind Key}" Style="{StaticResource SectionTitleStyle}" />
                             </DataTemplate>
                         </GroupStyle.HeaderTemplate>
                     </GroupStyle>
                 </ListView.GroupStyle>
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="m:Connection">
-                        <Grid Padding="0,8" ColumnSpacing="12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <FontIcon Glyph="{x:Bind h:Ui.ProtocolGlyph(Protocol)}" FontSize="18" VerticalAlignment="Center" />
-                            <StackPanel Grid.Column="1">
-                                <TextBlock Text="{x:Bind Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
-                                <TextBlock
-                                    Text="{x:Bind h:Ui.Endpoint(Host, Port), Mode=OneWay}"
-                                    Style="{ThemeResource CaptionTextBlockStyle}"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <FontIcon
-                                    Glyph="&#xE735;"
-                                    FontSize="12"
-                                    Foreground="{ThemeResource SystemFillColorCautionBrush}"
-                                    Visibility="{x:Bind h:Ui.VisibleIf(IsFavorite), Mode=OneWay}" />
-                                <Ellipse
-                                    Width="8"
-                                    Height="8"
-                                    Fill="{x:Bind h:Ui.StatusBrush(Status), Mode=OneWay}"
-                                    ToolTipService.ToolTip="{x:Bind h:Ui.StatusText(Status), Mode=OneWay}" />
-                            </StackPanel>
-                        </Grid>
+                        <c:ConnectionItem Connection="{x:Bind}" ShowFavorite="{x:Bind IsFavorite, Mode=OneWay}" />
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
@@ -119,224 +109,355 @@
             <StackPanel
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Spacing="12"
+                Spacing="8"
                 Visibility="{x:Bind h:Ui.CollapsedIfNotNull(ViewModel.Selected), Mode=OneWay}">
                 <FontIcon Glyph="&#xE703;" FontSize="48" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                <TextBlock
-                    Text="Selecione uma conexão ou crie uma nova"
-                    Style="{ThemeResource SubtitleTextBlockStyle}"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <TextBlock Text="Selecione uma conexão" Style="{ThemeResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" />
+                <TextBlock Text="ou crie uma nova com “Nova conexão”." Style="{StaticResource SecondaryTextStyle}" HorizontalAlignment="Center" />
             </StackPanel>
 
-            <!-- Editor -->
             <Grid Visibility="{x:Bind h:Ui.VisibleIfNotNull(ViewModel.Selected), Mode=OneWay}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <!-- Cabeçalho + ações -->
-                <Grid Padding="32,24,32,16" ColumnSpacing="16">
+                <!-- Cabeçalho: identificação + ações -->
+                <Grid Padding="{StaticResource PagePadding}" ColumnSpacing="16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <Border Width="48" Height="48" CornerRadius="8" Background="{ThemeResource AccentFillColorDefaultBrush}">
+                    <Border Style="{StaticResource ProtocolTileStyle}">
                         <FontIcon
                             Glyph="{x:Bind h:Ui.ProtocolGlyph(ViewModel.Selected.Protocol), Mode=OneWay}"
                             FontSize="22"
                             Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
                     </Border>
 
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                         <TextBlock
                             Text="{x:Bind ViewModel.Selected.Name, Mode=OneWay}"
                             Style="{ThemeResource SubtitleTextBlockStyle}"
                             TextTrimming="CharacterEllipsis" />
-                        <TextBlock
-                            Text="{x:Bind h:Ui.Summary(ViewModel.Selected.Protocol, ViewModel.Selected.Host, ViewModel.Selected.Port), Mode=OneWay}"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Ellipse Style="{StaticResource StatusDotStyle}" Fill="{x:Bind h:Ui.StatusBrush(ViewModel.Selected.Status), Mode=OneWay}" />
+                            <TextBlock Style="{StaticResource SecondaryTextStyle}">
+                                <Run Text="{x:Bind h:Ui.StatusText(ViewModel.Selected.Status), Mode=OneWay}" />
+                                <Run Text=" · " />
+                                <Run Text="{x:Bind h:Ui.Summary(ViewModel.Selected.Protocol, ViewModel.Selected.Host, ViewModel.Selected.Port), Mode=OneWay}" />
+                            </TextBlock>
+                        </StackPanel>
                     </StackPanel>
 
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                        <Button
-                            Command="{x:Bind ViewModel.ToggleFavoriteCommand}"
-                            ToolTipService.ToolTip="{x:Bind h:Ui.FavoriteTooltip(ViewModel.Selected.IsFavorite), Mode=OneWay}">
-                            <FontIcon Glyph="{x:Bind h:Ui.FavoriteGlyph(ViewModel.Selected.IsFavorite), Mode=OneWay}" FontSize="14" />
-                        </Button>
+                    <!-- Ações no modo leitura -->
+                    <StackPanel
+                        Grid.Column="2"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Center"
+                        Visibility="{x:Bind h:Ui.CollapsedIf(ViewModel.IsEditing), Mode=OneWay}">
                         <Button Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.ConnectCommand}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <FontIcon Glyph="&#xE768;" FontSize="14" />
+                                <FontIcon Glyph="&#xE768;" Style="{StaticResource ButtonIconStyle}" />
                                 <TextBlock Text="Conectar" />
                             </StackPanel>
                         </Button>
-                        <Button Command="{x:Bind ViewModel.SaveCommand}" ToolTipService.ToolTip="Salvar (Ctrl+S)">
+                        <Button Command="{x:Bind ViewModel.EditCommand}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <FontIcon Glyph="&#xE74E;" FontSize="14" />
-                                <TextBlock Text="Salvar" />
+                                <FontIcon Glyph="&#xE70F;" Style="{StaticResource ButtonIconStyle}" />
+                                <TextBlock Text="Editar" />
                             </StackPanel>
                         </Button>
-                        <Button Command="{x:Bind ViewModel.DuplicateCommand}" ToolTipService.ToolTip="Duplicar">
-                            <FontIcon Glyph="&#xE8C8;" FontSize="14" />
+                        <Button
+                            Command="{x:Bind ViewModel.ToggleFavoriteCommand}"
+                            ToolTipService.ToolTip="{x:Bind h:Ui.FavoriteTooltip(ViewModel.Selected.IsFavorite), Mode=OneWay}">
+                            <FontIcon Glyph="{x:Bind h:Ui.FavoriteGlyph(ViewModel.Selected.IsFavorite), Mode=OneWay}" Style="{StaticResource ButtonIconStyle}" />
                         </Button>
-                        <Button Click="Delete_Click" ToolTipService.ToolTip="Excluir">
-                            <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                        <Button ToolTipService.ToolTip="Mais opções">
+                            <FontIcon Glyph="&#xE712;" Style="{StaticResource ButtonIconStyle}" />
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                    <MenuFlyoutItem Text="Duplicar" Command="{x:Bind ViewModel.DuplicateCommand}">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE8C8;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem
+                                        Text="Copiar senha"
+                                        Command="{x:Bind ViewModel.CopyPasswordCommand}"
+                                        Visibility="{x:Bind h:Ui.VisibleIf(ViewModel.HasSavedPassword), Mode=OneWay}">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE8D7;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Excluir…" Click="Delete_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE74D;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Ações no modo edição -->
+                    <StackPanel
+                        Grid.Column="2"
+                        Orientation="Horizontal"
+                        Spacing="12"
+                        VerticalAlignment="Center"
+                        Visibility="{x:Bind h:Ui.VisibleIf(ViewModel.IsEditing), Mode=OneWay}">
+                        <TextBlock Text="Alterações salvas automaticamente" Style="{StaticResource SecondaryCaptionStyle}" VerticalAlignment="Center" />
+                        <Button Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.FinishEditingCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE73E;" Style="{StaticResource ButtonIconStyle}" />
+                                <TextBlock Text="Concluir" />
+                            </StackPanel>
                         </Button>
                     </StackPanel>
                 </Grid>
 
                 <ScrollViewer Grid.Row="1" Padding="32,0,32,24">
-                    <StackPanel Spacing="16" MaxWidth="720" HorizontalAlignment="Left">
+                    <Grid MaxWidth="760" HorizontalAlignment="Left">
 
-                        <!-- Geral -->
-                        <Border Style="{StaticResource CardStyle}">
-                            <StackPanel Spacing="12">
-                                <TextBlock Text="Geral" Style="{ThemeResource BodyStrongTextBlockStyle}" />
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="2*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox Header="Nome" Text="{x:Bind ViewModel.Selected.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    <TextBox Grid.Column="1" Header="Grupo" PlaceholderText="Ex.: Produção" Text="{x:Bind ViewModel.Selected.Group, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                </Grid>
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="140" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox Header="Host / IP" PlaceholderText="servidor.empresa.local" Text="{x:Bind ViewModel.Selected.Host, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    <NumberBox
-                                        Grid.Column="1"
-                                        Header="Porta"
-                                        Minimum="1"
-                                        Maximum="65535"
-                                        SpinButtonPlacementMode="Compact"
-                                        Value="{x:Bind ViewModel.Selected.Port, Mode=TwoWay}" />
-                                </Grid>
-                            </StackPanel>
-                        </Border>
+                        <!-- ========== Modo leitura ========== -->
+                        <StackPanel Spacing="{StaticResource SectionSpacing}" Visibility="{x:Bind h:Ui.CollapsedIf(ViewModel.IsEditing), Mode=OneWay}">
 
-                        <!-- Autenticação -->
-                        <Border Style="{StaticResource CardStyle}">
-                            <StackPanel Spacing="12">
-                                <TextBlock Text="Autenticação" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Conexão" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,4" />
+                                    <c:FieldRow Label="Tipo" Value="{x:Bind h:Ui.ProtocolLongName(ViewModel.Selected.Protocol), Mode=OneWay}" />
+                                    <c:FieldRow Label="Host / IP" Value="{x:Bind h:Ui.OrDash(ViewModel.Selected.Host), Mode=OneWay}" />
+                                    <c:FieldRow Label="Porta" Value="{x:Bind h:Ui.PortText(ViewModel.Selected.Port), Mode=OneWay}" />
+                                    <c:FieldRow Label="Grupo" Value="{x:Bind h:Ui.GroupText(ViewModel.Selected.Group), Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
 
-                                <CheckBox
-                                    Content="Usar o usuário do Windows (sessão atual)"
-                                    Visibility="{x:Bind h:Ui.RdpOnly(ViewModel.Selected.Protocol), Mode=OneWay}"
-                                    IsChecked="{x:Bind ViewModel.Selected.UseWindowsCredentials, Mode=TwoWay}" />
-                                <TextBlock
-                                    TextWrapping="Wrap"
-                                    Style="{ThemeResource CaptionTextBlockStyle}"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Visibility="{x:Bind h:Ui.WindowsCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials), Mode=OneWay}"
-                                    Text="{x:Bind h:Ui.WindowsUserInfo()}" />
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Autenticação" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,4" />
+                                    <c:FieldRow
+                                        Label="Usuário"
+                                        Value="{x:Bind h:Ui.UserText(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials, ViewModel.Selected.Username, ViewModel.Selected.Domain), Mode=OneWay}" />
+                                    <c:FieldRow
+                                        Label="Senha"
+                                        Value="{x:Bind h:Ui.PasswordText(ViewModel.HasSavedPassword), Mode=OneWay}"
+                                        Visibility="{x:Bind h:Ui.ManualCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials), Mode=OneWay}">
+                                        <c:FieldRow.Action>
+                                            <Button
+                                                Command="{x:Bind ViewModel.CopyPasswordCommand}"
+                                                Visibility="{x:Bind h:Ui.VisibleIf(ViewModel.HasSavedPassword), Mode=OneWay}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <FontIcon Glyph="&#xE8C8;" Style="{StaticResource ButtonIconStyle}" />
+                                                    <TextBlock Text="Copiar" />
+                                                </StackPanel>
+                                            </Button>
+                                        </c:FieldRow.Action>
+                                    </c:FieldRow>
+                                    <c:FieldRow
+                                        Label="Chave privada"
+                                        Value="{x:Bind h:Ui.OrDash(ViewModel.Selected.KeyFile), Mode=OneWay}"
+                                        Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
 
-                                <Grid ColumnSpacing="12" Visibility="{x:Bind h:Ui.ManualCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials), Mode=OneWay}">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox Header="Usuário" Text="{x:Bind ViewModel.Selected.Username, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <Border Style="{StaticResource CardStyle}" Visibility="{x:Bind h:Ui.RdpOnly(ViewModel.Selected.Protocol), Mode=OneWay}">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Exibição e recursos" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,4" />
+                                    <c:FieldRow
+                                        Label="Resolução"
+                                        Value="{x:Bind h:Ui.ResolutionText(ViewModel.Selected.FullScreen, ViewModel.Selected.DesktopWidth, ViewModel.Selected.DesktopHeight), Mode=OneWay}" />
+                                    <c:FieldRow Label="Todos os monitores" Value="{x:Bind h:Ui.YesNo(ViewModel.Selected.MultiMonitor), Mode=OneWay}" />
+                                    <c:FieldRow Label="Área de transferência" Value="{x:Bind h:Ui.YesNo(ViewModel.Selected.RedirectClipboard), Mode=OneWay}" />
+                                    <c:FieldRow Label="Unidades locais" Value="{x:Bind h:Ui.YesNo(ViewModel.Selected.RedirectDrives), Mode=OneWay}" />
+                                    <c:FieldRow Label="Sessão administrativa" Value="{x:Bind h:Ui.YesNo(ViewModel.Selected.AdminSession), Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Uso" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,4" />
+                                    <c:FieldRow Label="Conexões abertas" Value="{x:Bind h:Ui.UsageText(ViewModel.Selected.ConnectCount, ViewModel.Selected.LastConnected), Mode=OneWay}" />
+                                    <c:FieldRow Label="Status" Value="{x:Bind h:Ui.StatusText(ViewModel.Selected.Status), Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}" Visibility="{x:Bind h:Ui.VisibleIfText(ViewModel.Selected.Notes), Mode=OneWay}">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Notas" Style="{StaticResource SectionTitleStyle}" />
+                                    <TextBlock Text="{x:Bind ViewModel.Selected.Notes, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- ========== Modo edição ========== -->
+                        <StackPanel Spacing="{StaticResource SectionSpacing}" Visibility="{x:Bind h:Ui.VisibleIf(ViewModel.IsEditing), Mode=OneWay}">
+
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="Conexão" Style="{StaticResource SectionTitleStyle}" />
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Header="Nome" Text="{x:Bind ViewModel.Selected.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <TextBox Grid.Column="1" Header="Grupo" PlaceholderText="Ex.: Produção" Text="{x:Bind ViewModel.Selected.Group, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    </Grid>
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Header="Host / IP" PlaceholderText="servidor.empresa.local" Text="{x:Bind ViewModel.Selected.Host, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <NumberBox
+                                            Grid.Column="1"
+                                            Header="Porta"
+                                            Minimum="1"
+                                            Maximum="65535"
+                                            SpinButtonPlacementMode="Compact"
+                                            Value="{x:Bind ViewModel.Selected.Port, Mode=TwoWay}" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="Autenticação" Style="{StaticResource SectionTitleStyle}" />
+
+                                    <c:FieldRow
+                                        Label="Usar o usuário do Windows"
+                                        Description="Conecta com a conta da sessão atual, sem senha salva."
+                                        Visibility="{x:Bind h:Ui.RdpOnly(ViewModel.Selected.Protocol), Mode=OneWay}">
+                                        <c:FieldRow.Action>
+                                            <ToggleSwitch Style="{StaticResource RowToggleSwitchStyle}" IsOn="{x:Bind ViewModel.Selected.UseWindowsCredentials, Mode=TwoWay}" />
+                                        </c:FieldRow.Action>
+                                    </c:FieldRow>
+                                    <InfoBar
+                                        IsOpen="True"
+                                        IsClosable="False"
+                                        Severity="Informational"
+                                        Message="{x:Bind h:Ui.WindowsUserInfo()}"
+                                        Visibility="{x:Bind h:Ui.WindowsCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials), Mode=OneWay}" />
+
+                                    <Grid ColumnSpacing="12" Visibility="{x:Bind h:Ui.ManualCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials), Mode=OneWay}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Header="Usuário" Text="{x:Bind ViewModel.Selected.Username, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <TextBox
+                                            Grid.Column="1"
+                                            Header="Domínio"
+                                            PlaceholderText="Opcional"
+                                            Visibility="{x:Bind h:Ui.RdpOnly(ViewModel.Selected.Protocol), Mode=OneWay}"
+                                            Text="{x:Bind ViewModel.Selected.Domain, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    </Grid>
+
+                                    <Grid ColumnSpacing="8" Visibility="{x:Bind h:Ui.ManualCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials), Mode=OneWay}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <PasswordBox
+                                            Header="Senha (guardada no Gerenciador de Credenciais do Windows)"
+                                            PlaceholderText="{x:Bind h:Ui.PasswordPlaceholder(ViewModel.HasSavedPassword), Mode=OneWay}"
+                                            Password="{x:Bind ViewModel.Password, Mode=TwoWay}" />
+                                        <Button
+                                            Grid.Column="1"
+                                            VerticalAlignment="Bottom"
+                                            Content="Remover senha"
+                                            Visibility="{x:Bind h:Ui.VisibleIf(ViewModel.HasSavedPassword), Mode=OneWay}"
+                                            Command="{x:Bind ViewModel.ClearPasswordCommand}" />
+                                    </Grid>
+
+                                    <Grid ColumnSpacing="8" Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox
+                                            Header="Chave privada (opcional)"
+                                            PlaceholderText="C:\Users\voce\.ssh\id_ed25519"
+                                            Text="{x:Bind ViewModel.Selected.KeyFile, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <Button Grid.Column="1" VerticalAlignment="Bottom" Content="Procurar…" Click="BrowseKey_Click" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}" Visibility="{x:Bind h:Ui.RdpOnly(ViewModel.Selected.Protocol), Mode=OneWay}">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Exibição e recursos" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,8" />
+
+                                    <c:FieldRow Label="Tela cheia" Description="Desligado: abre em janela com o tamanho abaixo.">
+                                        <c:FieldRow.Action>
+                                            <ToggleSwitch Style="{StaticResource RowToggleSwitchStyle}" IsOn="{x:Bind ViewModel.Selected.FullScreen, Mode=TwoWay}" />
+                                        </c:FieldRow.Action>
+                                    </c:FieldRow>
+                                    <Grid
+                                        ColumnSpacing="12"
+                                        Margin="0,0,0,8"
+                                        Visibility="{x:Bind h:Ui.CollapsedIf(ViewModel.Selected.FullScreen), Mode=OneWay}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="160" />
+                                            <ColumnDefinition Width="160" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <NumberBox
+                                            Header="Largura"
+                                            Minimum="640"
+                                            Maximum="8192"
+                                            SpinButtonPlacementMode="Compact"
+                                            Value="{x:Bind ViewModel.Selected.DesktopWidth, Mode=TwoWay}" />
+                                        <NumberBox
+                                            Grid.Column="1"
+                                            Header="Altura"
+                                            Minimum="480"
+                                            Maximum="8192"
+                                            SpinButtonPlacementMode="Compact"
+                                            Value="{x:Bind ViewModel.Selected.DesktopHeight, Mode=TwoWay}" />
+                                    </Grid>
+
+                                    <c:FieldRow Label="Usar todos os monitores">
+                                        <c:FieldRow.Action>
+                                            <ToggleSwitch Style="{StaticResource RowToggleSwitchStyle}" IsOn="{x:Bind ViewModel.Selected.MultiMonitor, Mode=TwoWay}" />
+                                        </c:FieldRow.Action>
+                                    </c:FieldRow>
+                                    <c:FieldRow Label="Compartilhar área de transferência">
+                                        <c:FieldRow.Action>
+                                            <ToggleSwitch Style="{StaticResource RowToggleSwitchStyle}" IsOn="{x:Bind ViewModel.Selected.RedirectClipboard, Mode=TwoWay}" />
+                                        </c:FieldRow.Action>
+                                    </c:FieldRow>
+                                    <c:FieldRow Label="Compartilhar unidades locais">
+                                        <c:FieldRow.Action>
+                                            <ToggleSwitch Style="{StaticResource RowToggleSwitchStyle}" IsOn="{x:Bind ViewModel.Selected.RedirectDrives, Mode=TwoWay}" />
+                                        </c:FieldRow.Action>
+                                    </c:FieldRow>
+                                    <c:FieldRow Label="Sessão administrativa" Description="Equivale ao parâmetro /admin do mstsc.">
+                                        <c:FieldRow.Action>
+                                            <ToggleSwitch Style="{StaticResource RowToggleSwitchStyle}" IsOn="{x:Bind ViewModel.Selected.AdminSession, Mode=TwoWay}" />
+                                        </c:FieldRow.Action>
+                                    </c:FieldRow>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="Notas" Style="{StaticResource SectionTitleStyle}" />
                                     <TextBox
-                                        Grid.Column="1"
-                                        Header="Domínio"
-                                        PlaceholderText="Opcional"
-                                        Visibility="{x:Bind h:Ui.RdpOnly(ViewModel.Selected.Protocol), Mode=OneWay}"
-                                        Text="{x:Bind ViewModel.Selected.Domain, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                </Grid>
-
-                                <Grid ColumnSpacing="8" Visibility="{x:Bind h:Ui.ManualCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials), Mode=OneWay}">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <PasswordBox
-                                        Header="Senha (guardada no Gerenciador de Credenciais do Windows)"
-                                        PlaceholderText="{x:Bind h:Ui.PasswordPlaceholder(ViewModel.HasSavedPassword), Mode=OneWay}"
-                                        Password="{x:Bind ViewModel.Password, Mode=TwoWay}" />
-                                    <Button
-                                        Grid.Column="1"
-                                        VerticalAlignment="Bottom"
-                                        ToolTipService.ToolTip="Copiar senha"
-                                        Command="{x:Bind ViewModel.CopyPasswordCommand}">
-                                        <FontIcon Glyph="&#xE8C8;" FontSize="14" />
-                                    </Button>
-                                    <Button
-                                        Grid.Column="2"
-                                        VerticalAlignment="Bottom"
-                                        ToolTipService.ToolTip="Remover senha salva"
-                                        Visibility="{x:Bind h:Ui.VisibleIf(ViewModel.HasSavedPassword), Mode=OneWay}"
-                                        Command="{x:Bind ViewModel.ClearPasswordCommand}">
-                                        <FontIcon Glyph="&#xE711;" FontSize="14" />
-                                    </Button>
-                                </Grid>
-
-                                <Grid ColumnSpacing="8" Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox
-                                        Header="Chave privada (opcional)"
-                                        PlaceholderText="C:\Users\voce\.ssh\id_ed25519"
-                                        Text="{x:Bind ViewModel.Selected.KeyFile, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                    <Button Grid.Column="1" VerticalAlignment="Bottom" Content="Procurar…" Click="BrowseKey_Click" />
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Opções RDP -->
-                        <Border Style="{StaticResource CardStyle}" Visibility="{x:Bind h:Ui.RdpOnly(ViewModel.Selected.Protocol), Mode=OneWay}">
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="Exibição e recursos" Style="{ThemeResource BodyStrongTextBlockStyle}" />
-                                <ToggleSwitch Header="Tela cheia" IsOn="{x:Bind ViewModel.Selected.FullScreen, Mode=TwoWay}" />
-                                <!-- Grid não tem IsEnabled (não é Control): o estado vai em cada NumberBox -->
-                                <Grid ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="160" />
-                                        <ColumnDefinition Width="160" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <NumberBox
-                                        Header="Largura"
-                                        Minimum="640"
-                                        Maximum="8192"
-                                        SpinButtonPlacementMode="Compact"
-                                        IsEnabled="{x:Bind h:Ui.Not(ViewModel.Selected.FullScreen), Mode=OneWay}"
-                                        Value="{x:Bind ViewModel.Selected.DesktopWidth, Mode=TwoWay}" />
-                                    <NumberBox
-                                        Grid.Column="1"
-                                        Header="Altura"
-                                        Minimum="480"
-                                        Maximum="8192"
-                                        SpinButtonPlacementMode="Compact"
-                                        IsEnabled="{x:Bind h:Ui.Not(ViewModel.Selected.FullScreen), Mode=OneWay}"
-                                        Value="{x:Bind ViewModel.Selected.DesktopHeight, Mode=TwoWay}" />
-                                </Grid>
-                                <CheckBox Content="Usar todos os monitores" IsChecked="{x:Bind ViewModel.Selected.MultiMonitor, Mode=TwoWay}" />
-                                <CheckBox Content="Compartilhar área de transferência" IsChecked="{x:Bind ViewModel.Selected.RedirectClipboard, Mode=TwoWay}" />
-                                <CheckBox Content="Compartilhar unidades locais" IsChecked="{x:Bind ViewModel.Selected.RedirectDrives, Mode=TwoWay}" />
-                                <CheckBox Content="Sessão administrativa (/admin)" IsChecked="{x:Bind ViewModel.Selected.AdminSession, Mode=TwoWay}" />
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Notas -->
-                        <Border Style="{StaticResource CardStyle}">
-                            <StackPanel Spacing="12">
-                                <TextBlock Text="Notas" Style="{ThemeResource BodyStrongTextBlockStyle}" />
-                                <TextBox
-                                    AcceptsReturn="True"
-                                    TextWrapping="Wrap"
-                                    MinHeight="80"
-                                    Text="{x:Bind ViewModel.Selected.Notes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
+                                        AcceptsReturn="True"
+                                        TextWrapping="Wrap"
+                                        MinHeight="80"
+                                        PlaceholderText="Informações úteis sobre este servidor"
+                                        Text="{x:Bind ViewModel.Selected.Notes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
                 </ScrollViewer>
             </Grid>
         </Grid>

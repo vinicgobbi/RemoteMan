@@ -84,13 +84,6 @@ public static class Ui
         _ => $"{count} vezes · última {RelativeTime(last)}",
     };
 
-    // usados pelas telas anteriores ao redesenho
-    public static string UsageText(int count) => count == 1 ? "1 vez" : $"{count} vezes";
-    public static string GroupsText(int count) => count == 1 ? "em 1 grupo" : $"em {count} grupos";
-    public static string Number(int n) => n.ToString();
-    public static string ConnectionDetail(ConnectionProtocol p, DateTime? when) =>
-        $"{ProtocolName(p)} · {RelativeTime(when)}";
-
     // --- Valores exibidos no modo leitura ---
     public static Brush LabelBrush(string? value) => (Brush)Application.Current.Resources[
         string.IsNullOrEmpty(value) ? "TextFillColorPrimaryBrush" : "TextFillColorSecondaryBrush"];

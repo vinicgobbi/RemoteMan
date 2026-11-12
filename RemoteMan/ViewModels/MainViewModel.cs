@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml.Controls;
 using RemoteMan.Models;
 using RemoteMan.Services;
@@ -12,14 +14,44 @@ public partial class MainViewModel : ObservableObject
 {
     private const string NoGroup = "Sem grupo";
 
+    // salvamento automático: grava em disco pouco depois da última edição
+    private static readonly TimeSpan AutoSaveDelay = TimeSpan.FromMilliseconds(800);
+    // mensagens de sucesso/informação somem sozinhas; avisos e erros ficam até o usuário fechar
+    private static readonly TimeSpan StatusAutoClose = TimeSpan.FromSeconds(5);
+
+    // verificação de status (teste de porta TCP)
+    private const int MaxParallelChecks = 16;
+    private static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan StaleAfter = TimeSpan.FromMinutes(1);
+
+    // propriedades que mudam a posição/texto do item na lista agrupada
+    private static readonly HashSet<string> ListProperties =
+        [nameof(Connection.Name), nameof(Connection.Group), nameof(Connection.Host), nameof(Connection.Username)];
+
     private readonly ConnectionStore _store = new();
     private readonly List<Connection> _connections = [];
+    private readonly DispatcherQueue _dispatcher = DispatcherQueue.GetForCurrentThread();
+    private readonly DispatcherQueueTimer _autoSaveTimer;
+    private readonly DispatcherQueueTimer _statusTimer;
+    private CancellationTokenSource? _checkCts;
+    private bool _listDirty;
 
     public MainViewModel()
     {
         SearchText = string.Empty;
         Password = string.Empty;
         StatusMessage = string.Empty;
+        StatusSummary = "Status não verificado";
+
+        _autoSaveTimer = _dispatcher.CreateTimer();
+        _autoSaveTimer.Interval = AutoSaveDelay;
+        _autoSaveTimer.IsRepeating = false;
+        _autoSaveTimer.Tick += (_, _) => SaveToDisk();
+
+        _statusTimer = _dispatcher.CreateTimer();
+        _statusTimer.Interval = StatusAutoClose;
+        _statusTimer.IsRepeating = false;
+        _statusTimer.Tick += (_, _) => IsStatusOpen = false;
 
         try
         {
@@ -32,6 +64,9 @@ public partial class MainViewModel : ObservableObject
 
         RefreshGroups();
     }
+
+    /// <summary>Disparado sempre que as conexões são gravadas em disco (o dashboard se atualiza).</summary>
+    public event EventHandler? DataChanged;
 
     public ObservableCollection<ConnectionGroup> Groups { get; } = [];
 
@@ -46,6 +81,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] public partial Connection? Selected { get; set; }
     [ObservableProperty] public partial string SearchText { get; set; }
 
+    /// <summary>Painel de detalhes em modo de edição (false = somente leitura).</summary>
+    [ObservableProperty] public partial bool IsEditing { get; set; }
+
     /// <summary>Senha digitada e ainda não gravada no Credential Manager.</summary>
     [ObservableProperty] public partial string Password { get; set; }
     [ObservableProperty] public partial bool HasSavedPassword { get; set; }
@@ -54,17 +92,50 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] public partial string StatusMessage { get; set; }
     [ObservableProperty] public partial InfoBarSeverity StatusSeverity { get; set; }
 
+    // --- Status online/offline ---
+    [ObservableProperty] public partial bool IsChecking { get; set; }
+    [ObservableProperty] public partial DateTime? LastCheckedAt { get; set; }
+
+    /// <summary>Resumo em uma frase, ex.: "12 online · 2 offline".</summary>
+    [ObservableProperty] public partial string StatusSummary { get; set; }
+
     partial void OnSearchTextChanged(string value) => RefreshGroups();
 
     partial void OnSelectedChanged(Connection? oldValue, Connection? newValue)
     {
-        // senha digitada na conexão anterior não se perde ao trocar de item
         if (oldValue is not null)
+        {
+            oldValue.PropertyChanged -= Selected_PropertyChanged;
+            // senha digitada na conexão anterior não se perde ao trocar de item
             TryPersistPendingPassword(oldValue);
+            FlushAutoSave();
+        }
+
+        if (newValue is not null)
+            newValue.PropertyChanged += Selected_PropertyChanged;
 
         Password = string.Empty;
         HasSavedPassword = newValue is not null && CredentialStore.Exists(CredentialStore.KeyFor(newValue));
+        IsEditing = false;
+
+        // nome/grupo editados: reorganiza a lista depois que a troca de seleção terminar
+        if (_listDirty)
+            _dispatcher.TryEnqueue(RefreshGroups);
     }
+
+    private void Selected_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(Connection.Status))
+            return;
+
+        if (e.PropertyName is { } name && ListProperties.Contains(name))
+            _listDirty = true;
+
+        _autoSaveTimer.Stop();
+        _autoSaveTimer.Start();
+    }
+
+    // --- Comandos de criação e edição ---
 
     [RelayCommand]
     private void NewRdp() => AddNew(ConnectionProtocol.Rdp);
@@ -81,19 +152,43 @@ public partial class MainViewModel : ObservableObject
         SearchText = string.Empty; // garante que a nova apareça (dispara RefreshGroups)
         RefreshGroups();
         Selected = c;
+        IsEditing = true;
         SaveToDisk();
-        ShowStatus("Conexão criada. Preencha os dados e clique em Salvar.", InfoBarSeverity.Informational);
+        ShowStatus("Conexão criada. Preencha os dados; as alterações são salvas automaticamente.", InfoBarSeverity.Informational);
     }
 
+    [RelayCommand]
+    private void Edit()
+    {
+        if (Selected is not null)
+            IsEditing = true;
+    }
+
+    /// <summary>Sai do modo de edição gravando tudo (senha pendente, arquivo e lista).</summary>
+    [RelayCommand]
+    private void FinishEditing()
+    {
+        if (Selected is { } c && !TryPersistPendingPassword(c))
+            return;
+
+        FlushAutoSave();
+        if (_listDirty)
+            RefreshGroups();
+        IsEditing = false;
+    }
+
+    /// <summary>Ctrl+S: grava imediatamente, sem sair do modo de edição.</summary>
     [RelayCommand]
     private void Save()
     {
         if (Selected is { } c && !TryPersistPendingPassword(c))
             return;
 
+        _autoSaveTimer.Stop();
         if (SaveToDisk())
         {
-            RefreshGroups(); // o grupo/nome pode ter mudado
+            if (_listDirty)
+                RefreshGroups();
             ShowStatus("Conexões salvas.", InfoBarSeverity.Success);
         }
     }
@@ -121,6 +216,7 @@ public partial class MainViewModel : ObservableObject
 
         RefreshGroups();
         Selected = copy;
+        IsEditing = true; // a cópia normalmente precisa de outro nome/host
         SaveToDisk();
     }
 
@@ -147,10 +243,12 @@ public partial class MainViewModel : ObservableObject
             ShowStatus($"\"{c.Name}\" excluída.", InfoBarSeverity.Success);
     }
 
+    // --- Conectar ---
+
     [RelayCommand]
     private void Connect() => ConnectTo(Selected);
 
-    /// <summary>Abre a conexão informada (usada pelo editor e pelos cards do dashboard).</summary>
+    /// <summary>Abre a conexão informada (usada pelos detalhes, pela lista e pelo dashboard).</summary>
     public void ConnectTo(Connection? c)
     {
         if (c is null)
@@ -192,6 +290,7 @@ public partial class MainViewModel : ObservableObject
 
             c.LastConnected = DateTime.Now;
             c.ConnectCount++;
+            _autoSaveTimer.Stop();
             SaveToDisk();
         }
         catch (Exception ex)
@@ -207,16 +306,20 @@ public partial class MainViewModel : ObservableObject
             return;
 
         c.IsFavorite = !c.IsFavorite;
+        _autoSaveTimer.Stop();
         SaveToDisk();
     }
 
-    /// <summary>Seleciona uma conexão garantindo que ela apareça na lista (limpa a busca).</summary>
+    /// <summary>Seleciona uma conexão (em modo leitura) garantindo que ela apareça na lista.</summary>
     public void Reveal(Connection c)
     {
         if (!Groups.Any(g => g.Contains(c)))
             SearchText = string.Empty;
         Selected = c;
+        IsEditing = false;
     }
+
+    // --- Senha ---
 
     [RelayCommand]
     private void CopyPassword()
@@ -254,11 +357,100 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    // --- Status online/offline ---
+
+    /// <summary>Verifica o status só se a última verificação tiver mais de 1 minuto.</summary>
+    public void CheckStatusIfStale()
+    {
+        if (IsChecking)
+            return;
+        if (LastCheckedAt is { } last && DateTime.Now - last < StaleAfter)
+            return;
+        _ = CheckStatusAsync();
+    }
+
+    [RelayCommand]
+    private async Task CheckStatusAsync()
+    {
+        _checkCts?.Cancel();
+        var cts = _checkCts = new CancellationTokenSource();
+
+        var targets = _connections.Where(c => !string.IsNullOrWhiteSpace(c.Host)).ToList();
+        foreach (var c in _connections)
+            c.Status = string.IsNullOrWhiteSpace(c.Host) ? ReachabilityStatus.Unknown : ReachabilityStatus.Checking;
+
+        IsChecking = true;
+        UpdateStatusSummary();
+
+        using var gate = new SemaphoreSlim(MaxParallelChecks);
+
+        // as continuações voltam para a thread de UI (o método começa nela), então é seguro mexer em Status
+        async Task CheckOne(Connection c)
+        {
+            await gate.WaitAsync(cts.Token);
+            try
+            {
+                var ok = await ReachabilityChecker.IsReachableAsync(c.Host.Trim(), (int)c.Port, CheckTimeout, cts.Token);
+                c.Status = ok ? ReachabilityStatus.Online : ReachabilityStatus.Offline;
+            }
+            finally
+            {
+                gate.Release();
+            }
+            UpdateStatusSummary();
+        }
+
+        try
+        {
+            await Task.WhenAll(targets.Select(CheckOne));
+            LastCheckedAt = DateTime.Now;
+        }
+        catch (OperationCanceledException)
+        {
+            // uma nova verificação começou e assumiu o controle
+        }
+        finally
+        {
+            if (ReferenceEquals(_checkCts, cts))
+            {
+                IsChecking = false;
+                UpdateStatusSummary();
+            }
+        }
+    }
+
+    private void UpdateStatusSummary()
+    {
+        var online = _connections.Count(c => c.Status == ReachabilityStatus.Online);
+        var offline = _connections.Count(c => c.Status == ReachabilityStatus.Offline);
+        var checking = _connections.Count(c => c.Status == ReachabilityStatus.Checking);
+
+        StatusSummary = checking > 0
+            ? $"Verificando {checking} {(checking == 1 ? "servidor" : "servidores")}…"
+            : online + offline == 0
+                ? "Status não verificado"
+                : offline == 0
+                    ? online == 1 ? "1 servidor online" : $"Todos os {online} servidores online"
+                    : $"{online} online · {offline} offline";
+    }
+
+    // --- Persistência ---
+
     /// <summary>Chamado ao fechar a janela.</summary>
     public void SaveAll()
     {
         if (Selected is { } c)
             TryPersistPendingPassword(c);
+        _autoSaveTimer.Stop();
+        SaveToDisk();
+    }
+
+    /// <summary>Grava agora se houver um salvamento automático pendente.</summary>
+    private void FlushAutoSave()
+    {
+        if (!_autoSaveTimer.IsRunning)
+            return;
+        _autoSaveTimer.Stop();
         SaveToDisk();
     }
 
@@ -287,6 +479,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             _store.Save(_connections);
+            DataChanged?.Invoke(this, EventArgs.Empty);
             return true;
         }
         catch (Exception ex)
@@ -298,6 +491,7 @@ public partial class MainViewModel : ObservableObject
 
     private void RefreshGroups()
     {
+        _listDirty = false;
         IsRefreshing = true;
         try
         {
@@ -335,6 +529,10 @@ public partial class MainViewModel : ObservableObject
         StatusMessage = message;
         StatusSeverity = severity;
         IsStatusOpen = true;
+
+        _statusTimer.Stop();
+        if (severity is InfoBarSeverity.Success or InfoBarSeverity.Informational)
+            _statusTimer.Start();
     }
 
     private static void CopyToClipboard(string text)

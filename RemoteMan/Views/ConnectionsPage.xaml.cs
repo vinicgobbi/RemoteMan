@@ -30,6 +30,7 @@ public sealed partial class ConnectionsPage : Page
     {
         base.OnNavigatedTo(e);
         SyncListSelection();
+        ViewModel.CheckStatusIfStale();
     }
 
     private void SyncListSelection()
@@ -49,6 +50,7 @@ public sealed partial class ConnectionsPage : Page
         ViewModel.Selected = ConnectionList.SelectedItem as Connection;
     }
 
+    /// <summary>Duplo clique numa conexão: conecta (mesmo comportamento do dashboard).</summary>
     private void ConnectionList_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
         if (ViewModel.Selected is not null)
