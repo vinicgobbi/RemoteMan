@@ -51,7 +51,10 @@ public static class SshLauncher
         return args;
     }
 
-    private static string FindSsh()
+    private static string FindSsh() => FindSshPath() ?? "ssh.exe";
+
+    /// <summary>Caminho do OpenSSH do Windows, ou null se não estiver instalado.</summary>
+    public static string? FindSshPath()
     {
         // processo 32 bits enxerga System32 redirecionado; "Sysnative" aponta para o real
         var sysDir = Environment.Is64BitProcess || !Environment.Is64BitOperatingSystem
@@ -59,10 +62,10 @@ public static class SshLauncher
             : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Sysnative");
 
         var path = Path.Combine(sysDir, "OpenSSH", "ssh.exe");
-        return File.Exists(path) ? path : "ssh.exe";
+        return File.Exists(path) ? path : null;
     }
 
-    private static string? FindWindowsTerminal()
+    public static string? FindWindowsTerminal()
     {
         var alias = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
