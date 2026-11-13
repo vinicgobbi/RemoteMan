@@ -17,7 +17,7 @@ public sealed partial class NewConnectionDialog : ContentDialog
     private static ConnectionProtocol s_lastProtocol = ConnectionProtocol.Rdp;
 
     private readonly IReadOnlyList<Connection> _existing;
-    private ParsedAddress? _address;
+    private ConnectionAddress? _address;
 
     public NewConnectionDialog(IEnumerable<string> groups, string? defaultGroup, IReadOnlyList<Connection> existing)
     {
@@ -96,7 +96,7 @@ public sealed partial class NewConnectionDialog : ContentDialog
 
     private void UpdateAddress()
     {
-        var defaultPort = DefaultPort(Protocol);
+        var defaultPort = ConnectionAddress.DefaultPort(Protocol);
         var text = AddressBox.Text;
 
         if (string.IsNullOrWhiteSpace(text))
@@ -105,7 +105,7 @@ public sealed partial class NewConnectionDialog : ContentDialog
             return;
         }
 
-        if (!ParsedAddress.TryParse(text, out var parsed, out var error))
+        if (!ConnectionAddress.TryParse(text, out var parsed, out var error))
         {
             SetAddress(null, error, error: true);
             return;
@@ -121,7 +121,7 @@ public sealed partial class NewConnectionDialog : ContentDialog
         SetAddress(parsed, hint, error: false);
     }
 
-    private void SetAddress(ParsedAddress? parsed, string hint, bool error)
+    private void SetAddress(ConnectionAddress? parsed, string hint, bool error)
     {
         _address = parsed;
         AddressHint.Text = hint;
@@ -134,7 +134,7 @@ public sealed partial class NewConnectionDialog : ContentDialog
         // aviso (não bloqueia): já existe uma conexão igual
         var duplicate = parsed is null ? null : _existing.FirstOrDefault(c =>
             c.Protocol == Protocol
-            && (int)c.Port == (parsed.Port ?? DefaultPort(Protocol))
+            && (int)c.Port == (parsed.Port ?? ConnectionAddress.DefaultPort(Protocol))
             && string.Equals(c.Host.Trim(), parsed.Host, StringComparison.OrdinalIgnoreCase));
 
         DuplicateInfo.IsOpen = duplicate is not null;
@@ -157,7 +157,7 @@ public sealed partial class NewConnectionDialog : ContentDialog
         {
             Protocol = protocol,
             Host = address.Host,
-            Port = address.Port ?? DefaultPort(protocol),
+            Port = address.Port ?? ConnectionAddress.DefaultPort(protocol),
             Name = name.Length > 0 ? name : address.Host,
             Group = GroupBox.Text?.Trim() ?? string.Empty,
             UseWindowsCredentials = UsesWindowsLogin,
@@ -170,12 +170,8 @@ public sealed partial class NewConnectionDialog : ContentDialog
                 user = address.User;
 
             // RDP: "DOMINIO\usuario" vai para os campos Domínio e Usuário
-            var slash = user.IndexOf('\\');
-            if (protocol == ConnectionProtocol.Rdp && slash > 0)
-            {
-                c.Domain = user[..slash];
-                user = user[(slash + 1)..];
-            }
+            if (protocol == ConnectionProtocol.Rdp)
+                (c.Domain, user) = ConnectionAddress.SplitDomainUser(user);
 
             c.Username = user;
             Password = PasswordInput.Password;
@@ -183,93 +179,5 @@ public sealed partial class NewConnectionDialog : ContentDialog
 
         Result = c;
         ConnectAfter = connect;
-    }
-
-    private static int DefaultPort(ConnectionProtocol p) => p == ConnectionProtocol.Rdp ? 3389 : 22;
-
-    /// <summary>
-    /// Endereço digitado pelo usuário. Aceita "host", "host:porta", "[ipv6]:porta",
-    /// "usuario@host" e prefixos como "ssh://" ou "rdp://".
-    /// </summary>
-    private sealed record ParsedAddress(string Host, int? Port, string? User)
-    {
-        public static bool TryParse(string text, out ParsedAddress result, out string error)
-        {
-            result = null!;
-            error = string.Empty;
-
-            var s = text.Trim();
-            var scheme = s.IndexOf("://", StringComparison.Ordinal);
-            if (scheme >= 0)
-                s = s[(scheme + 3)..];
-            s = s.TrimEnd('/');
-
-            string? user = null;
-            var at = s.LastIndexOf('@');
-            if (at >= 0)
-            {
-                user = s[..at];
-                s = s[(at + 1)..];
-                if (user.Length == 0)
-                    user = null;
-            }
-
-            string host;
-            string? portText = null;
-            if (s.StartsWith('['))
-            {
-                // IPv6 com porta: [fe80::1]:3390
-                var close = s.IndexOf(']');
-                if (close < 0)
-                {
-                    error = "Endereço IPv6 incompleto: falta o “]”.";
-                    return false;
-                }
-                host = s[1..close];
-                var rest = s[(close + 1)..];
-                if (rest.StartsWith(':'))
-                    portText = rest[1..];
-                else if (rest.Length > 0)
-                {
-                    error = "Use o formato [endereço IPv6]:porta.";
-                    return false;
-                }
-            }
-            else if (s.Count(ch => ch == ':') == 1)
-            {
-                var colon = s.IndexOf(':');
-                host = s[..colon];
-                portText = s[(colon + 1)..];
-            }
-            else
-            {
-                host = s; // nome, IPv4 ou IPv6 sem porta
-            }
-
-            if (host.Length == 0)
-            {
-                error = "Informe o nome ou IP do servidor.";
-                return false;
-            }
-            if (host.Any(char.IsWhiteSpace) || (user?.Any(char.IsWhiteSpace) ?? false))
-            {
-                error = "O endereço não pode ter espaços.";
-                return false;
-            }
-
-            int? port = null;
-            if (portText is not null)
-            {
-                if (!int.TryParse(portText, out var p) || p is < 1 or > 65535)
-                {
-                    error = "Porta inválida: use um número de 1 a 65535.";
-                    return false;
-                }
-                port = p;
-            }
-
-            result = new ParsedAddress(host, port, user);
-            return true;
-        }
     }
 }

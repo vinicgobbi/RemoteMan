@@ -3,12 +3,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace RemoteMan.Models;
 
-public enum ConnectionProtocol
-{
-    Rdp,
-    Ssh,
-}
-
 /// <summary>Resultado do teste de porta TCP (só em memória, não é salvo).</summary>
 public enum ReachabilityStatus
 {
