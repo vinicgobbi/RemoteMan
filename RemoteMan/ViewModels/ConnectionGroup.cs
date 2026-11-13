@@ -8,4 +8,6 @@ public sealed class ConnectionGroup(string key, IEnumerable<Connection> items)
     : ObservableCollection<Connection>(items)
 {
     public string Key { get; } = key;
+
+    public string ConnectAllText => $"Conectar a todas ({Count})";
 }

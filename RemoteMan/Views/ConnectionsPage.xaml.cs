@@ -79,6 +79,32 @@ public sealed partial class ConnectionsPage : Page
             await App.MainWindow.ImportAsync(source);
     }
 
+    // acima disso, pede confirmação antes de abrir tudo
+    private const int ConnectAllConfirmThreshold = 5;
+
+    private async void ConnectGroup_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: ConnectionGroup group } || group.Count == 0)
+            return;
+
+        if (group.Count > ConnectAllConfirmThreshold)
+        {
+            var dialog = new ContentDialog
+            {
+                XamlRoot = XamlRoot,
+                Title = "Conectar a todas",
+                Content = $"Abrir {group.Count} conexões do grupo \"{group.Key}\" de uma vez?",
+                PrimaryButtonText = "Conectar",
+                CloseButtonText = "Cancelar",
+                DefaultButton = ContentDialogButton.Primary,
+            };
+            if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+                return;
+        }
+
+        ViewModel.ConnectAll(group.ToList(), group.Key);
+    }
+
     private async void Delete_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel.Selected is not { } c)

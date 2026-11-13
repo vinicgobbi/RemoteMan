@@ -311,21 +311,21 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void Connect() => ConnectTo(Selected);
 
-    /// <summary>Abre a conexão informada (usada pelos detalhes, pela lista e pelo dashboard).</summary>
-    public void ConnectTo(Connection? c)
+    /// <summary>Abre a conexão informada (usada pelos detalhes, pela lista e pelo dashboard). Retorna se abriu.</summary>
+    public bool ConnectTo(Connection? c)
     {
         if (c is null)
-            return;
+            return false;
 
         if (string.IsNullOrWhiteSpace(c.Host))
         {
             ShowStatus($"Informe o host de \"{c.Name}\" antes de conectar.", InfoBarSeverity.Warning);
-            return;
+            return false;
         }
 
         // a senha digitada no editor pertence à conexão selecionada, não necessariamente a "c"
         if (Selected is { } editing && !TryPersistPendingPassword(editing))
-            return;
+            return false;
 
         try
         {
@@ -355,11 +355,33 @@ public partial class MainViewModel : ObservableObject
             c.ConnectCount++;
             _autoSaveTimer.Stop();
             SaveToDisk();
+            return true;
         }
         catch (Exception ex)
         {
             ShowStatus($"Falha ao abrir a conexão: {ex.Message}", InfoBarSeverity.Error);
+            return false;
         }
+    }
+
+    /// <summary>Abre todas as conexões informadas (ex.: um grupo inteiro). Ignora as que não têm host.</summary>
+    public void ConnectAll(IReadOnlyList<Connection> items, string groupName)
+    {
+        var targets = items.Where(c => !string.IsNullOrWhiteSpace(c.Host)).ToList();
+        var skipped = items.Count - targets.Count;
+        var failed = targets.Count(c => !ConnectTo(c));
+        var opened = targets.Count - failed;
+
+        var message = $"Abrindo {opened} {(opened == 1 ? "conexão" : "conexões")} de \"{groupName}\".";
+        if (skipped > 0)
+            message += $" {skipped} sem host {(skipped == 1 ? "foi ignorada" : "foram ignoradas")}.";
+        if (failed > 0)
+            message += $" {failed} {(failed == 1 ? "falhou" : "falharam")}.";
+        // várias SSH com senha: a área de transferência fica só com a última
+        if (targets.Count(c => c.Protocol == ConnectionProtocol.Ssh && string.IsNullOrWhiteSpace(c.KeyFile)) > 1)
+            message += " Senhas SSH: a área de transferência guarda só a da última.";
+
+        ShowStatus(message, skipped + failed > 0 ? InfoBarSeverity.Warning : InfoBarSeverity.Success);
     }
 
     [RelayCommand]
