@@ -285,6 +285,10 @@
                                     <c:FieldRow Label="Host / IP" Value="{x:Bind h:Ui.OrDash(ViewModel.Selected.Host), Mode=OneWay}" />
                                     <c:FieldRow Label="Porta" Value="{x:Bind h:Ui.PortText(ViewModel.Selected.Port), Mode=OneWay}" />
                                     <c:FieldRow Label="Grupo" Value="{x:Bind h:Ui.GroupText(ViewModel.Selected.Group), Mode=OneWay}" />
+                                    <c:FieldRow
+                                        Label="RD Gateway"
+                                        Value="{x:Bind h:Ui.OrDash(ViewModel.Selected.GatewayHost), Mode=OneWay}"
+                                        Visibility="{x:Bind h:Ui.RdpOnly(ViewModel.Selected.Protocol), Mode=OneWay}" />
                                 </StackPanel>
                             </Border>
 
@@ -454,6 +458,30 @@
                                         Margin="0,-8,0,0"
                                         Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}"
                                         Text="Servidor intermediário usado para chegar até este (ssh -J). Separe vários com vírgula." />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}" Visibility="{x:Bind h:Ui.RdpOnly(ViewModel.Selected.Protocol), Mode=OneWay}">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="RD Gateway" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,8" />
+                                    <TextBox
+                                        Header="Servidor do gateway (opcional)"
+                                        PlaceholderText="gateway.empresa.com"
+                                        IsSpellCheckEnabled="False"
+                                        Margin="0,0,0,8"
+                                        Text="{x:Bind ViewModel.Selected.GatewayHost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <StackPanel Visibility="{x:Bind h:Ui.VisibleIfText(ViewModel.Selected.GatewayHost), Mode=OneWay}">
+                                        <c:FieldRow Label="Ignorar para endereços locais" Description="Conecta direto quando o servidor está na rede local.">
+                                            <c:FieldRow.Action>
+                                                <ToggleSwitch Style="{StaticResource RowToggleSwitchStyle}" IsOn="{x:Bind ViewModel.Selected.GatewayBypassLocal, Mode=TwoWay}" />
+                                            </c:FieldRow.Action>
+                                        </c:FieldRow>
+                                        <c:FieldRow Label="Usar as mesmas credenciais" Description="Usa o mesmo usuário e senha no gateway e no computador remoto.">
+                                            <c:FieldRow.Action>
+                                                <ToggleSwitch Style="{StaticResource RowToggleSwitchStyle}" IsOn="{x:Bind ViewModel.Selected.GatewayUseSameCredentials, Mode=TwoWay}" />
+                                            </c:FieldRow.Action>
+                                        </c:FieldRow>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
 

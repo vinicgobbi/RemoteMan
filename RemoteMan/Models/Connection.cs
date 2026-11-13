@@ -27,6 +27,8 @@ public partial class Connection : ObservableObject
         Domain = string.Empty;
         KeyFile = string.Empty;
         JumpHost = string.Empty;
+        GatewayHost = string.Empty;
+        GatewayUseSameCredentials = true;
         Notes = string.Empty;
         Port = 3389;
         FullScreen = true;
@@ -65,6 +67,15 @@ public partial class Connection : ObservableObject
     [ObservableProperty] public partial bool RedirectDrives { get; set; }
     [ObservableProperty] public partial bool AdminSession { get; set; }
 
+    /// <summary>Servidor RD Gateway (vazio = conexão direta).</summary>
+    [ObservableProperty] public partial string GatewayHost { get; set; }
+
+    /// <summary>Não usa o gateway para endereços da rede local.</summary>
+    [ObservableProperty] public partial bool GatewayBypassLocal { get; set; }
+
+    /// <summary>Mesmas credenciais no gateway e no computador remoto.</summary>
+    [ObservableProperty] public partial bool GatewayUseSameCredentials { get; set; }
+
     // --- SSH ---
     [ObservableProperty] public partial string KeyFile { get; set; }
 
@@ -92,6 +103,9 @@ public partial class Connection : ObservableObject
         AdminSession = AdminSession,
         KeyFile = KeyFile,
         JumpHost = JumpHost,
+        GatewayHost = GatewayHost,
+        GatewayBypassLocal = GatewayBypassLocal,
+        GatewayUseSameCredentials = GatewayUseSameCredentials,
     };
 
     /// <summary>Usuário no formato DOMINIO\usuario quando houver domínio.</summary>

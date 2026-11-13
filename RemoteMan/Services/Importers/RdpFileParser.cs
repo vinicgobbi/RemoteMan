@@ -40,9 +40,11 @@ public static class RdpFileParser
         var port = parsed.Port ?? Int("server port") ?? ConnectionAddress.DefaultRdpPort;
         var (domain, user) = ConnectionAddress.SplitDomainUser(Str("username"));
 
+        // 1 = sempre usar o gateway, 2 = ignorar para endereços locais; outros valores = sem gateway
+        var gatewayMethod = Int("gatewayusagemethod");
+        var gatewayHost = gatewayMethod is 1 or 2 ? Str("gatewayhostname") : string.Empty;
+
         var warnings = new List<string>();
-        if (Int("gatewayusagemethod") is 1 or 2 && Str("gatewayhostname").Length > 0)
-            warnings.Add("usa RD Gateway, que ainda não é suportado");
         if (Str("alternate shell").Length > 0 || Str("remoteapplicationprogram").Length > 0)
             warnings.Add("é um RemoteApp/programa remoto; será importado como área de trabalho completa");
 
@@ -62,6 +64,9 @@ public static class RdpFileParser
             RedirectClipboard = Bool("redirectclipboard"),
             RedirectDrives = values.TryGetValue("drivestoredirect", out var drives) ? drives.Length > 0 : null,
             AdminSession = Bool("administrative session") ?? Bool("connect to console"),
+            GatewayHost = gatewayHost,
+            GatewayBypassLocal = gatewayHost.Length > 0 ? gatewayMethod == 2 : null,
+            GatewayUseSameCredentials = gatewayHost.Length > 0 ? Bool("promptcredentialonce") : null,
             Warning = warnings.Count > 0 ? $"Este arquivo {string.Join(" e ", warnings)}." : null,
         };
         return true;

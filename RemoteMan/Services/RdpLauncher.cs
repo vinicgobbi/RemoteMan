@@ -30,30 +30,26 @@ public static class RdpLauncher
                 CredentialStore.Write(CredentialStore.RdpKeyFor(host), username, password);
         }
 
-        var sb = new StringBuilder();
-        sb.AppendLine($"full address:s:{(port is > 0 and not 3389 ? $"{host}:{port}" : host)}");
-        if (username is not null)
-            sb.AppendLine($"username:s:{username}");
-        sb.AppendLine($"screen mode id:i:{(c.FullScreen ? 2 : 1)}");
-        if (!c.FullScreen)
+        var content = RdpFileBuilder.Build(new RdpFileOptions
         {
-            sb.AppendLine($"desktopwidth:i:{(int)c.DesktopWidth}");
-            sb.AppendLine($"desktopheight:i:{(int)c.DesktopHeight}");
-        }
-        sb.AppendLine($"use multimon:i:{(c.MultiMonitor ? 1 : 0)}");
-        sb.AppendLine($"redirectclipboard:i:{(c.RedirectClipboard ? 1 : 0)}");
-        if (c.RedirectDrives)
-            sb.AppendLine("drivestoredirect:s:*");
-        sb.AppendLine("prompt for credentials:i:0");
-        sb.AppendLine("authentication level:i:2");
-        sb.AppendLine("enablecredsspsupport:i:1");
-        sb.AppendLine("smart sizing:i:1");
-        sb.AppendLine("dynamic resolution:i:1");
+            Host = host,
+            Port = port,
+            Username = username,
+            FullScreen = c.FullScreen,
+            DesktopWidth = (int)c.DesktopWidth,
+            DesktopHeight = (int)c.DesktopHeight,
+            MultiMonitor = c.MultiMonitor,
+            RedirectClipboard = c.RedirectClipboard,
+            RedirectDrives = c.RedirectDrives,
+            GatewayHost = c.GatewayHost,
+            GatewayBypassLocal = c.GatewayBypassLocal,
+            GatewayUseSameCredentials = c.GatewayUseSameCredentials,
+        });
 
         var dir = Path.Combine(Path.GetTempPath(), "RemoteMan");
         Directory.CreateDirectory(dir);
         var file = Path.Combine(dir, $"{c.Id}.rdp");
-        File.WriteAllText(file, sb.ToString(), Encoding.Unicode);
+        File.WriteAllText(file, content, Encoding.Unicode);
 
         var psi = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "mstsc.exe"))
         {

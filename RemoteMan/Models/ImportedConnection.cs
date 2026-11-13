@@ -28,6 +28,9 @@ public sealed record ImportedConnection
     public bool? RedirectClipboard { get; init; }
     public bool? RedirectDrives { get; init; }
     public bool? AdminSession { get; init; }
+    public string GatewayHost { get; init; } = string.Empty;
+    public bool? GatewayBypassLocal { get; init; }
+    public bool? GatewayUseSameCredentials { get; init; }
 
     /// <summary>Algo que não pôde ser importado (ex.: chave .ppk, RD Gateway).</summary>
     public string? Warning { get; init; }

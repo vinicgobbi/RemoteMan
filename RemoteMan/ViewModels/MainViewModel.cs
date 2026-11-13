@@ -198,6 +198,7 @@ public partial class MainViewModel : ObservableObject
                 Domain = i.Domain,
                 KeyFile = i.KeyFile,
                 JumpHost = i.JumpHost,
+                GatewayHost = i.GatewayHost,
             };
             // opções RDP ausentes no arquivo mantêm o padrão do app
             if (i.FullScreen is { } fullScreen) c.FullScreen = fullScreen;
@@ -207,6 +208,8 @@ public partial class MainViewModel : ObservableObject
             if (i.RedirectClipboard is { } clipboard) c.RedirectClipboard = clipboard;
             if (i.RedirectDrives is { } drives) c.RedirectDrives = drives;
             if (i.AdminSession is { } admin) c.AdminSession = admin;
+            if (i.GatewayBypassLocal is { } bypass) c.GatewayBypassLocal = bypass;
+            if (i.GatewayUseSameCredentials is { } sameCredentials) c.GatewayUseSameCredentials = sameCredentials;
             return c;
         }).ToList();
 
