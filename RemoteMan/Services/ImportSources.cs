@@ -11,6 +11,20 @@ public enum ImportSource
     SshConfig,
     SshConfigFile,
     Putty,
+    Backup,
+}
+
+/// <summary>Formatos de exportação.</summary>
+public enum ExportKind
+{
+    /// <summary>Backup do RemoteMan (.json, todas as opções, sem senhas).</summary>
+    Backup,
+
+    /// <summary>Um arquivo .rdp por conexão RDP.</summary>
+    RdpFiles,
+
+    /// <summary>Perfis SSH no formato do ~/.ssh/config.</summary>
+    SshConfig,
 }
 
 /// <summary>Lê as fontes de importação no disco e no registro e repassa aos parsers.</summary>
@@ -56,6 +70,18 @@ public static class ImportSources
         try
         {
             return SshConfigParser.Parse(File.ReadAllText(path), HomeDir);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new ImportResult([], [$"Não foi possível ler {path}: {ex.Message}"]);
+        }
+    }
+
+    public static ImportResult ReadBackup(string path)
+    {
+        try
+        {
+            return BackupFile.Parse(File.ReadAllText(path));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

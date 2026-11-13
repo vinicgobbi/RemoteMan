@@ -18,6 +18,12 @@ public sealed partial class SettingsPage : Page
         _loading = true;
         BackdropBox.SelectedIndex = (int)App.Settings.Backdrop;
         CheckUpdatesSwitch.IsOn = App.Settings.CheckForUpdates;
+        MonitorSwitch.IsOn = App.Settings.MonitorEnabled;
+        MonitorIntervalBox.SelectedItem = MonitorIntervalBox.Items
+            .OfType<ComboBoxItem>()
+            .FirstOrDefault(i => (string)i.Tag == App.Settings.MonitorIntervalMinutes.ToString())
+            ?? MonitorIntervalBox.Items[1];
+        MonitorIntervalBox.IsEnabled = MonitorSwitch.IsOn;
         _loading = false;
         ShowBackdropNote(App.Settings.Backdrop, App.MainWindow.AppliedBackdrop);
     }
@@ -32,6 +38,25 @@ public sealed partial class SettingsPage : Page
 
         App.Settings.Backdrop = requested;
         SaveSettings();
+    }
+
+    private void Monitor_Toggled(object sender, RoutedEventArgs e)
+    {
+        MonitorIntervalBox.IsEnabled = MonitorSwitch.IsOn;
+        if (_loading)
+            return;
+        App.Settings.MonitorEnabled = MonitorSwitch.IsOn;
+        SaveSettings();
+        App.ViewModel.ApplyMonitorSettings();
+    }
+
+    private void MonitorInterval_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || MonitorIntervalBox.SelectedItem is not ComboBoxItem { Tag: string tag } || !int.TryParse(tag, out var minutes))
+            return;
+        App.Settings.MonitorIntervalMinutes = minutes;
+        SaveSettings();
+        App.ViewModel.ApplyMonitorSettings();
     }
 
     private void CheckUpdates_Toggled(object sender, RoutedEventArgs e)
@@ -85,6 +110,48 @@ public sealed partial class SettingsPage : Page
     public string? SshPath { get; } = SshLauncher.FindSshPath();
     public bool HasWindowsTerminal { get; } = SshLauncher.FindWindowsTerminal() is not null;
     public string DataFilePath => App.ViewModel.DataFilePath;
+
+    public ViewModels.MainViewModel ViewModel => App.ViewModel;
+
+    // --- Credenciais compartilhadas ---
+
+    private async void NewCredential_Click(object sender, RoutedEventArgs e) => await EditCredentialAsync(null);
+
+    private async void EditCredential_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: SharedCredential cred })
+            await EditCredentialAsync(cred);
+    }
+
+    private async Task EditCredentialAsync(SharedCredential? cred)
+    {
+        var dialog = new CredentialDialog(cred) { XamlRoot = XamlRoot };
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary && dialog.Result is { } result)
+            App.ViewModel.SaveCredential(result, dialog.Password);
+    }
+
+    private async void DeleteCredential_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: SharedCredential cred })
+            return;
+
+        var usage = App.ViewModel.CredentialUsageCount(cred);
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = "Excluir credencial",
+            Content = usage == 0
+                ? $"Excluir \"{cred.Name}\"? A senha salva também será removida."
+                : $"\"{cred.Name}\" é usada por {(usage == 1 ? "1 conexão" : $"{usage} conexões")}. Ao excluir, "
+                  + "elas passam a usar o mesmo usuário como próprio, mas ficam sem senha salva.",
+            PrimaryButtonText = "Excluir",
+            CloseButtonText = "Cancelar",
+            DefaultButton = ContentDialogButton.Close,
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            App.ViewModel.DeleteCredential(cred);
+    }
 
     public string Version { get; } =
         Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "—";

@@ -38,10 +38,24 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="1" ToolTipService.ToolTip="Importar conexões">
+                <Button Grid.Column="1" ToolTipService.ToolTip="Importar e exportar">
                     <FontIcon Glyph="&#xE8B5;" Style="{StaticResource ButtonIconStyle}" />
                     <Button.Flyout>
                         <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                            <MenuFlyoutSubItem Text="Exportar">
+                                <MenuFlyoutSubItem.Icon>
+                                    <FontIcon Glyph="&#xEDE1;" />
+                                </MenuFlyoutSubItem.Icon>
+                                <MenuFlyoutItem Text="Backup do RemoteMan (.json)…" Tag="Backup" Click="Export_Click" />
+                                <MenuFlyoutItem Text="Conexões RDP (arquivos .rdp)…" Tag="RdpFiles" Click="Export_Click" />
+                                <MenuFlyoutItem Text="Perfis SSH (ssh config)…" Tag="SshConfig" Click="Export_Click" />
+                            </MenuFlyoutSubItem>
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Text="Backup do RemoteMan (.json)…" Tag="Backup" Click="Import_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE8B5;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
                             <MenuFlyoutItem Text="Arquivos .rdp…" Tag="RdpFiles" Click="Import_Click">
                                 <MenuFlyoutItem.Icon>
                                     <FontIcon Glyph="&#xE7F4;" />
@@ -105,7 +119,48 @@
                     <GroupStyle>
                         <GroupStyle.HeaderTemplate>
                             <DataTemplate x:DataType="vm:ConnectionGroup">
-                                <TextBlock Text="{x:Bind Key}" Style="{StaticResource SectionTitleStyle}" />
+                                <Grid ColumnSpacing="4" Background="Transparent">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.ContextFlyout>
+                                        <MenuFlyout>
+                                            <MenuFlyoutItem Text="{x:Bind ConnectAllText}" Tag="{x:Bind}" Click="ConnectGroup_Click">
+                                                <MenuFlyoutItem.Icon>
+                                                    <FontIcon Glyph="&#xE768;" />
+                                                </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                            <MenuFlyoutItem Text="Exportar grupo (backup .json)…" Tag="{x:Bind}" Click="ExportGroup_Click">
+                                                <MenuFlyoutItem.Icon>
+                                                    <FontIcon Glyph="&#xEDE1;" />
+                                                </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                        </MenuFlyout>
+                                    </Grid.ContextFlyout>
+                                    <TextBlock Text="{x:Bind Key}" Style="{StaticResource SectionTitleStyle}" VerticalAlignment="Center" />
+                                    <Button
+                                        Grid.Column="1"
+                                        Padding="6,4"
+                                        Style="{StaticResource IconButtonStyle}"
+                                        ToolTipService.ToolTip="Ações do grupo">
+                                        <FontIcon Glyph="&#xE712;" FontSize="12" />
+                                        <Button.Flyout>
+                                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                <MenuFlyoutItem Text="{x:Bind ConnectAllText}" Tag="{x:Bind}" Click="ConnectGroup_Click">
+                                                    <MenuFlyoutItem.Icon>
+                                                        <FontIcon Glyph="&#xE768;" />
+                                                    </MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Exportar grupo (backup .json)…" Tag="{x:Bind}" Click="ExportGroup_Click">
+                                                    <MenuFlyoutItem.Icon>
+                                                        <FontIcon Glyph="&#xEDE1;" />
+                                                    </MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                            </MenuFlyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                </Grid>
                             </DataTemplate>
                         </GroupStyle.HeaderTemplate>
                     </GroupStyle>
@@ -254,6 +309,10 @@
                                     <c:FieldRow Label="Host / IP" Value="{x:Bind h:Ui.OrDash(ViewModel.Selected.Host), Mode=OneWay}" />
                                     <c:FieldRow Label="Porta" Value="{x:Bind h:Ui.PortText(ViewModel.Selected.Port), Mode=OneWay}" />
                                     <c:FieldRow Label="Grupo" Value="{x:Bind h:Ui.GroupText(ViewModel.Selected.Group), Mode=OneWay}" />
+                                    <c:FieldRow
+                                        Label="RD Gateway"
+                                        Value="{x:Bind h:Ui.OrDash(ViewModel.Selected.GatewayHost), Mode=OneWay}"
+                                        Visibility="{x:Bind h:Ui.RdpOnly(ViewModel.Selected.Protocol), Mode=OneWay}" />
                                 </StackPanel>
                             </Border>
 
@@ -262,7 +321,7 @@
                                     <TextBlock Text="Autenticação" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,4" />
                                     <c:FieldRow
                                         Label="Usuário"
-                                        Value="{x:Bind h:Ui.UserText(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials, ViewModel.Selected.Username, ViewModel.Selected.Domain), Mode=OneWay}" />
+                                        Value="{x:Bind h:Ui.UserTextWithCredential(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials, ViewModel.Selected.Username, ViewModel.Selected.Domain, ViewModel.Selected.CredentialId), Mode=OneWay}" />
                                     <c:FieldRow
                                         Label="Senha"
                                         Value="{x:Bind h:Ui.PasswordText(ViewModel.HasSavedPassword), Mode=OneWay}"
@@ -285,6 +344,10 @@
                                     <c:FieldRow
                                         Label="Conectar via"
                                         Value="{x:Bind h:Ui.OrDash(ViewModel.Selected.JumpHost), Mode=OneWay}"
+                                        Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}" />
+                                    <c:FieldRow
+                                        Label="Túneis"
+                                        Value="{x:Bind h:Ui.TunnelsText(ViewModel.Selected.Tunnels), Mode=OneWay}"
                                         Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}" />
                                 </StackPanel>
                             </Border>
@@ -368,7 +431,20 @@
                                         Message="{x:Bind h:Ui.WindowsUserInfo()}"
                                         Visibility="{x:Bind h:Ui.WindowsCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials), Mode=OneWay}" />
 
-                                    <Grid ColumnSpacing="12" Visibility="{x:Bind h:Ui.ManualCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials), Mode=OneWay}">
+                                    <ComboBox
+                                        x:Name="CredentialBox"
+                                        Header="Credencial"
+                                        HorizontalAlignment="Stretch"
+                                        Visibility="{x:Bind h:Ui.ManualCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials), Mode=OneWay}"
+                                        SelectionChanged="Credential_SelectionChanged" />
+                                    <TextBlock
+                                        Style="{StaticResource SecondaryCaptionStyle}"
+                                        TextWrapping="Wrap"
+                                        Margin="0,-4,0,0"
+                                        Text="{x:Bind h:Ui.SharedCredentialText(ViewModel.Selected.CredentialId), Mode=OneWay}"
+                                        Visibility="{x:Bind h:Ui.SharedCredentialInfo(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials, ViewModel.Selected.CredentialId), Mode=OneWay}" />
+
+                                    <Grid ColumnSpacing="12" Visibility="{x:Bind h:Ui.OwnCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials, ViewModel.Selected.CredentialId), Mode=OneWay}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="*" />
@@ -382,7 +458,7 @@
                                             Text="{x:Bind ViewModel.Selected.Domain, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                     </Grid>
 
-                                    <Grid ColumnSpacing="8" Visibility="{x:Bind h:Ui.ManualCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials), Mode=OneWay}">
+                                    <Grid ColumnSpacing="8" Visibility="{x:Bind h:Ui.OwnCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials, ViewModel.Selected.CredentialId), Mode=OneWay}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
@@ -423,6 +499,59 @@
                                         Margin="0,-8,0,0"
                                         Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}"
                                         Text="Servidor intermediário usado para chegar até este (ssh -J). Separe vários com vírgula." />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}" Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Túneis (port forwarding)" Style="{StaticResource SectionTitleStyle}" />
+                                    <TextBlock Style="{StaticResource SecondaryCaptionStyle}" TextWrapping="Wrap">
+                                        <Run Text="Um por linha. " />
+                                        <Run Text="L 8080:localhost:80" FontFamily="Consolas" />
+                                        <Run Text=" abre a porta 8080 aqui e leva ao destino visto pelo servidor; " />
+                                        <Run Text="R 9000:localhost:3000" FontFamily="Consolas" />
+                                        <Run Text=" abre a 9000 no servidor; " />
+                                        <Run Text="D 1080" FontFamily="Consolas" />
+                                        <Run Text=" cria um proxy SOCKS local." />
+                                    </TextBlock>
+                                    <TextBox
+                                        AcceptsReturn="True"
+                                        TextWrapping="NoWrap"
+                                        MinHeight="72"
+                                        FontFamily="Consolas"
+                                        IsSpellCheckEnabled="False"
+                                        PlaceholderText="L 5432:db.interno:5432"
+                                        Text="{x:Bind ViewModel.Selected.Tunnels, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock
+                                        Style="{ThemeResource CaptionTextBlockStyle}"
+                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                        TextWrapping="Wrap"
+                                        Text="{x:Bind h:Ui.TunnelErrors(ViewModel.Selected.Tunnels), Mode=OneWay}"
+                                        Visibility="{x:Bind h:Ui.TunnelErrorsVisibility(ViewModel.Selected.Tunnels), Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}" Visibility="{x:Bind h:Ui.RdpOnly(ViewModel.Selected.Protocol), Mode=OneWay}">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="RD Gateway" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,8" />
+                                    <TextBox
+                                        Header="Servidor do gateway (opcional)"
+                                        PlaceholderText="gateway.empresa.com"
+                                        IsSpellCheckEnabled="False"
+                                        Margin="0,0,0,8"
+                                        Text="{x:Bind ViewModel.Selected.GatewayHost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <StackPanel Visibility="{x:Bind h:Ui.VisibleIfText(ViewModel.Selected.GatewayHost), Mode=OneWay}">
+                                        <c:FieldRow Label="Ignorar para endereços locais" Description="Conecta direto quando o servidor está na rede local.">
+                                            <c:FieldRow.Action>
+                                                <ToggleSwitch Style="{StaticResource RowToggleSwitchStyle}" IsOn="{x:Bind ViewModel.Selected.GatewayBypassLocal, Mode=TwoWay}" />
+                                            </c:FieldRow.Action>
+                                        </c:FieldRow>
+                                        <c:FieldRow Label="Usar as mesmas credenciais" Description="Usa o mesmo usuário e senha no gateway e no computador remoto.">
+                                            <c:FieldRow.Action>
+                                                <ToggleSwitch Style="{StaticResource RowToggleSwitchStyle}" IsOn="{x:Bind ViewModel.Selected.GatewayUseSameCredentials, Mode=TwoWay}" />
+                                            </c:FieldRow.Action>
+                                        </c:FieldRow>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
 

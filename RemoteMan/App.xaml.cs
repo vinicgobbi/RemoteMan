@@ -29,6 +29,13 @@ public partial class App : Application
         MainWindow = new MainWindow();
         MainWindow.Activate();
 
+        // monitoramento: notificações de favoritos que caem ou voltam
+        Notifier.Initialize();
+        var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        Notifier.Invoked += id => dispatcher.TryEnqueue(() => MainWindow.ShowFromNotification(id));
+        ViewModel.FavoritesStatusChanged += (_, changes) => Notifier.ShowStatusChanges(changes);
+        ViewModel.ApplyMonitorSettings();
+
         // em segundo plano: não atrasa a abertura e falha em silêncio
         _ = ViewModel.CheckForUpdatesIfDueAsync();
     }

@@ -15,7 +15,17 @@ public static class SshConfigParser
     {
         public string[] Patterns { get; } = patterns;
         public Dictionary<string, string> Options { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>LocalForward/RemoteForward/DynamicForward: ao contrário das outras opções, acumulam.</summary>
+        public List<SshTunnel> Forwards { get; } = [];
     }
+
+    private static readonly Dictionary<string, TunnelKind> ForwardKeywords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["LocalForward"] = TunnelKind.Local,
+        ["RemoteForward"] = TunnelKind.Remote,
+        ["DynamicForward"] = TunnelKind.Dynamic,
+    };
 
     /// <param name="content">Conteúdo do arquivo.</param>
     /// <param name="homeDir">Pasta do usuário, para expandir "~" e "%d" em IdentityFile.</param>
@@ -52,6 +62,13 @@ public static class SshConfigParser
             {
                 errors.Add($"Include {args} foi ignorado: importe esse arquivo separadamente.");
             }
+            else if (ForwardKeywords.TryGetValue(keyword, out var forwardKind))
+            {
+                if (SshTunnels.TryParseConfigForward(forwardKind, args, out var tunnel))
+                    current.Forwards.Add(tunnel);
+                else
+                    errors.Add($"{keyword} {args} foi ignorado: formato não reconhecido.");
+            }
             else
             {
                 // primeiro valor vale; o resto da linha é o argumento (IdentityFile pode ter aspas)
@@ -66,9 +83,13 @@ public static class SshConfigParser
         foreach (var alias in aliases.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var forwards = new List<SshTunnel>();
             foreach (var block in blocks.Where(b => Matches(b.Patterns, alias)))
+            {
                 foreach (var (k, v) in block.Options)
                     options.TryAdd(k, v);
+                forwards.AddRange(block.Forwards.Where(f => !forwards.Contains(f)));
+            }
 
             var host = Get(options, "HostName") is { Length: > 0 } h ? h.Replace("%h", alias) : alias;
             var portText = Get(options, "Port");
@@ -95,6 +116,7 @@ public static class SshConfigParser
                 Username = Get(options, "User") ?? string.Empty,
                 KeyFile = ExpandPath(Get(options, "IdentityFile"), homeDir),
                 JumpHost = jumpHost,
+                Tunnels = SshTunnels.ToText(forwards),
                 Warning = warning,
             });
         }

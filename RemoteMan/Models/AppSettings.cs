@@ -22,4 +22,9 @@ public sealed class AppSettings
     public bool CheckForUpdates { get; set; } = true;
 
     public DateTime? LastUpdateCheck { get; set; }
+
+    /// <summary>Verifica o status periodicamente e notifica quando um favorito cai ou volta.</summary>
+    public bool MonitorEnabled { get; set; }
+
+    public int MonitorIntervalMinutes { get; set; } = 5;
 }

@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using RemoteMan.Models;
+using RemoteMan.Services;
 
 namespace RemoteMan.Helpers;
 
@@ -106,6 +107,18 @@ public static class Ui
         return p == ConnectionProtocol.Rdp && !string.IsNullOrWhiteSpace(domain) ? $"{domain.Trim()}\\{user}" : user;
     }
 
+    /// <summary>Resumo dos túneis para o modo leitura (ex.: "L 8080:localhost:80 · D 1080").</summary>
+    public static string TunnelsText(string? text)
+    {
+        var tunnels = SshTunnels.Parse(text).Tunnels;
+        return tunnels.Count == 0 ? "—" : string.Join(" · ", tunnels.Select(t => t.Line));
+    }
+
+    /// <summary>Erros de validação dos túneis (vazio se tudo certo).</summary>
+    public static string TunnelErrors(string? text) => string.Join("\n", SshTunnels.Parse(text).Errors);
+
+    public static Visibility TunnelErrorsVisibility(string? text) => VisibleIf(SshTunnels.Parse(text).Errors.Count > 0);
+
     public static string PasswordText(bool hasSaved) => hasSaved ? "Salva no Windows" : "Nenhuma senha salva";
 
     // --- Ambiente ---
@@ -116,6 +129,40 @@ public static class Ui
     /// <summary>Campos de usuário/senha: escondidos quando o RDP usa o usuário do Windows.</summary>
     public static Visibility ManualCredentials(ConnectionProtocol p, bool useWindows) =>
         VisibleIf(!(p == ConnectionProtocol.Rdp && useWindows));
+
+    /// <summary>Usuário/senha próprios da conexão: escondidos com usuário do Windows ou credencial compartilhada.</summary>
+    public static Visibility OwnCredentials(ConnectionProtocol p, bool useWindows, Guid? credentialId) =>
+        VisibleIf(!(p == ConnectionProtocol.Rdp && useWindows) && credentialId is null);
+
+    public static Visibility SharedCredentialInfo(ConnectionProtocol p, bool useWindows, Guid? credentialId) =>
+        VisibleIf(!(p == ConnectionProtocol.Rdp && useWindows) && credentialId is not null);
+
+    public static string SharedCredentialText(Guid? credentialId) =>
+        App.ViewModel.Credentials.FirstOrDefault(c => c.Id == credentialId) is { } cred
+            ? $"Usa o usuário {OrDash(cred.FullUsername)} e a senha da credencial \"{cred.Name}\". Para trocar a senha, edite a credencial em Configurações."
+            : "A credencial escolhida não existe mais.";
+
+    /// <summary>Linha de apoio da lista de credenciais: "EMPRESA\admin · usada em 3 conexões".</summary>
+    public static string CredentialDetails(string fullUsername, Guid id)
+    {
+        var usage = App.ViewModel.Connections.Count(c => c.CredentialId == id);
+        var usageText = usage switch
+        {
+            0 => "não usada",
+            1 => "usada em 1 conexão",
+            _ => $"usada em {usage} conexões",
+        };
+        return $"{OrDash(fullUsername)} · {usageText}";
+    }
+
+    /// <summary>Usuário exibido no modo leitura, considerando a credencial compartilhada.</summary>
+    public static string UserTextWithCredential(ConnectionProtocol p, bool useWindows, string user, string domain, Guid? credentialId)
+    {
+        if (!(p == ConnectionProtocol.Rdp && useWindows)
+            && App.ViewModel.Credentials.FirstOrDefault(c => c.Id == credentialId) is { } cred)
+            return $"{OrDash(cred.FullUsername)} (credencial \"{cred.Name}\")";
+        return UserText(p, useWindows, user, domain);
+    }
 
     public static Visibility WindowsCredentials(ConnectionProtocol p, bool useWindows) =>
         VisibleIf(p == ConnectionProtocol.Rdp && useWindows);

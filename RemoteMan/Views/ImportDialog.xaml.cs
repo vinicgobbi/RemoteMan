@@ -27,6 +27,9 @@ public sealed partial class ImportDialog : ContentDialog
             .ToList();
         ItemsList.ItemsSource = _items;
         GroupBox.ItemsSource = groups.ToList();
+        // backup do RemoteMan traz os grupos: campo vazio mantém o grupo de cada conexão
+        if (_items.Any(i => i.Connection.Group.Length > 0))
+            GroupBox.PlaceholderText = "Manter os grupos do arquivo";
 
         var total = _items.Count;
         var duplicates = _items.Count(i => i.IsDuplicate);

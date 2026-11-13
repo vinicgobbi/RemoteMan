@@ -29,10 +29,14 @@ public partial class MainViewModel : ObservableObject
         [nameof(Connection.Name), nameof(Connection.Group), nameof(Connection.Host), nameof(Connection.Username)];
 
     private readonly ConnectionStore _store = new();
+    private readonly SharedCredentialStore _credentialStore = new();
     private readonly List<Connection> _connections = [];
     private readonly DispatcherQueue _dispatcher = DispatcherQueue.GetForCurrentThread();
     private readonly DispatcherQueueTimer _autoSaveTimer;
     private readonly DispatcherQueueTimer _statusTimer;
+    private readonly DispatcherQueueTimer _monitorTimer;
+    // último estado conhecido (true = online) de cada servidor, para detectar quedas e retornos
+    private readonly Dictionary<Guid, bool> _lastKnownStatus = [];
     private CancellationTokenSource? _checkCts;
     private bool _listDirty;
 
@@ -53,6 +57,14 @@ public partial class MainViewModel : ObservableObject
         _statusTimer.IsRepeating = false;
         _statusTimer.Tick += (_, _) => IsStatusOpen = false;
 
+        _monitorTimer = _dispatcher.CreateTimer();
+        _monitorTimer.IsRepeating = true;
+        _monitorTimer.Tick += (_, _) =>
+        {
+            if (!IsChecking)
+                _ = CheckStatusAsync();
+        };
+
         try
         {
             _connections = _store.Load();
@@ -62,8 +74,112 @@ public partial class MainViewModel : ObservableObject
             ShowStatus($"Não foi possível ler {_store.FilePath}: {ex.Message}", InfoBarSeverity.Error);
         }
 
+        try
+        {
+            foreach (var cred in _credentialStore.Load().OrderBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase))
+                Credentials.Add(cred);
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"Não foi possível ler {_credentialStore.FilePath}: {ex.Message}", InfoBarSeverity.Error);
+        }
+
         RefreshGroups();
     }
+
+    // --- Credenciais compartilhadas ---
+
+    public ObservableCollection<SharedCredential> Credentials { get; } = [];
+
+    /// <summary>Credencial compartilhada usada pela conexão (null = própria ou não encontrada).</summary>
+    public SharedCredential? CredentialFor(Connection c) =>
+        c.CredentialId is { } id ? Credentials.FirstOrDefault(x => x.Id == id) : null;
+
+    /// <summary>Usuário efetivo no formato DOMINIO\usuario (da credencial compartilhada ou da conexão).</summary>
+    public string? EffectiveFullUsername(Connection c)
+    {
+        var full = CredentialFor(c)?.FullUsername ?? (string.IsNullOrWhiteSpace(c.Username) ? null : c.FullUsername);
+        return string.IsNullOrWhiteSpace(full) ? null : full;
+    }
+
+    /// <summary>Usuário gravado no .rdp exportado (sem o usuário do Windows, que é de quem abrir o arquivo).</summary>
+    public string? ExportUsername(Connection c) => c.UseWindowsCredentials ? null : EffectiveFullUsername(c);
+
+    private string PasswordKey(Connection c) =>
+        CredentialFor(c) is { } cred ? CredentialStore.KeyForShared(cred.Id) : CredentialStore.KeyFor(c);
+
+    public string? ReadPassword(Connection c) => CredentialStore.ReadPassword(PasswordKey(c));
+
+    private bool HasPassword(Connection c) => CredentialStore.Exists(PasswordKey(c));
+
+    public int CredentialUsageCount(SharedCredential cred) => _connections.Count(c => c.CredentialId == cred.Id);
+
+    /// <summary>Cria ou atualiza uma credencial. Senha null mantém a atual.</summary>
+    public bool SaveCredential(SharedCredential cred, string? password)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(password))
+                CredentialStore.Write(CredentialStore.KeyForShared(cred.Id), cred.FullUsername, password);
+
+            var index = Credentials.IndexOf(cred);
+            if (index >= 0)
+                Credentials[index] = cred; // força a lista a redesenhar o item editado
+            else
+                Credentials.Add(cred);
+
+            SaveCredentials();
+            if (Selected is { } s && s.CredentialId == cred.Id)
+                HasSavedPassword = HasPassword(s);
+            ShowStatus($"Credencial \"{cred.Name}\" salva.", InfoBarSeverity.Success);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"Falha ao salvar a credencial: {ex.Message}", InfoBarSeverity.Error);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Exclui a credencial. As conexões que a usavam voltam a ter usuário próprio (copiado da credencial),
+    /// mas sem senha.
+    /// </summary>
+    public void DeleteCredential(SharedCredential cred)
+    {
+        foreach (var c in _connections.Where(c => c.CredentialId == cred.Id))
+        {
+            c.CredentialId = null;
+            c.Username = cred.Username;
+            c.Domain = cred.Domain;
+        }
+
+        try
+        {
+            CredentialStore.Delete(CredentialStore.KeyForShared(cred.Id));
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"Falha ao remover a senha da credencial: {ex.Message}", InfoBarSeverity.Warning);
+        }
+
+        Credentials.Remove(cred);
+        SaveCredentials();
+        _autoSaveTimer.Stop();
+        SaveToDisk();
+        if (Selected is { } s)
+            HasSavedPassword = HasPassword(s);
+        ShowStatus($"Credencial \"{cred.Name}\" excluída.", InfoBarSeverity.Success);
+    }
+
+    private void SaveCredentials()
+    {
+        _credentialStore.Save(Credentials);
+        CredentialsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Lista de credenciais mudou (o editor atualiza o seletor).</summary>
+    public event EventHandler? CredentialsChanged;
 
     /// <summary>Disparado sempre que as conexões são gravadas em disco (o dashboard se atualiza).</summary>
     public event EventHandler? DataChanged;
@@ -115,7 +231,7 @@ public partial class MainViewModel : ObservableObject
             newValue.PropertyChanged += Selected_PropertyChanged;
 
         Password = string.Empty;
-        HasSavedPassword = newValue is not null && CredentialStore.Exists(CredentialStore.KeyFor(newValue));
+        HasSavedPassword = newValue is not null && HasPassword(newValue);
         IsEditing = false;
 
         // nome/grupo editados: reorganiza a lista depois que a troca de seleção terminar
@@ -125,6 +241,10 @@ public partial class MainViewModel : ObservableObject
 
     private void Selected_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        // trocar a credencial muda de onde vem a senha
+        if (e.PropertyName == nameof(Connection.CredentialId) && sender is Connection changed)
+            HasSavedPassword = HasPassword(changed);
+
         if (e.PropertyName == nameof(Connection.Status))
             return;
 
@@ -179,7 +299,47 @@ public partial class MainViewModel : ObservableObject
             ShowStatus($"\"{c.Name}\" criada.", InfoBarSeverity.Success);
     }
 
-    /// <summary>Adiciona conexões vindas da importação e seleciona a primeira.</summary>
+    /// <summary>Conexão no formato neutro de importação/exportação (sem senha).</summary>
+    public ImportedConnection ToImported(Connection c) => new()
+    {
+        Protocol = c.Protocol,
+        Name = c.Name,
+        Host = c.Host.Trim(),
+        Port = (int)c.Port,
+        // credencial compartilhada: leva o usuário dela (o Id não faz sentido em outra máquina)
+        Username = CredentialFor(c)?.Username ?? c.Username,
+        Domain = CredentialFor(c)?.Domain ?? c.Domain,
+        Group = c.Group,
+        Notes = c.Notes,
+        IsFavorite = c.IsFavorite,
+        UseWindowsCredentials = c.UseWindowsCredentials,
+        KeyFile = c.KeyFile,
+        JumpHost = c.JumpHost,
+        Tunnels = c.Tunnels,
+        FullScreen = c.FullScreen,
+        DesktopWidth = (int)c.DesktopWidth,
+        DesktopHeight = (int)c.DesktopHeight,
+        MultiMonitor = c.MultiMonitor,
+        RedirectClipboard = c.RedirectClipboard,
+        RedirectDrives = c.RedirectDrives,
+        AdminSession = c.AdminSession,
+        GatewayHost = c.GatewayHost,
+        GatewayBypassLocal = c.GatewayBypassLocal,
+        GatewayUseSameCredentials = c.GatewayUseSameCredentials,
+    };
+
+    /// <summary>Conexões de um grupo da lista ("Sem grupo" = conexões sem grupo).</summary>
+    public IReadOnlyList<Connection> ConnectionsInGroup(string groupKey) =>
+        _connections
+            .Where(c => groupKey == NoGroup
+                ? string.IsNullOrWhiteSpace(c.Group)
+                : string.Equals(c.Group.Trim(), groupKey, StringComparison.CurrentCultureIgnoreCase))
+            .ToList();
+
+    /// <summary>
+    /// Adiciona conexões vindas da importação e seleciona a primeira.
+    /// Grupo vazio mantém o grupo de origem de cada item (backup do RemoteMan).
+    /// </summary>
     public void ImportConnections(IReadOnlyList<ImportedConnection> items, string group)
     {
         if (items.Count == 0)
@@ -191,13 +351,17 @@ public partial class MainViewModel : ObservableObject
             {
                 Protocol = i.Protocol,
                 Name = i.Name,
-                Group = group,
+                Group = string.IsNullOrWhiteSpace(group) ? i.Group : group,
+                Notes = i.Notes,
+                IsFavorite = i.IsFavorite,
                 Host = i.Host,
                 Port = i.Port,
                 Username = i.Username,
                 Domain = i.Domain,
                 KeyFile = i.KeyFile,
                 JumpHost = i.JumpHost,
+                Tunnels = i.Tunnels,
+                GatewayHost = i.GatewayHost,
             };
             // opções RDP ausentes no arquivo mantêm o padrão do app
             if (i.FullScreen is { } fullScreen) c.FullScreen = fullScreen;
@@ -207,6 +371,9 @@ public partial class MainViewModel : ObservableObject
             if (i.RedirectClipboard is { } clipboard) c.RedirectClipboard = clipboard;
             if (i.RedirectDrives is { } drives) c.RedirectDrives = drives;
             if (i.AdminSession is { } admin) c.AdminSession = admin;
+            if (i.UseWindowsCredentials is { } windows) c.UseWindowsCredentials = windows;
+            if (i.GatewayBypassLocal is { } bypass) c.GatewayBypassLocal = bypass;
+            if (i.GatewayUseSameCredentials is { } sameCredentials) c.GatewayUseSameCredentials = sameCredentials;
             return c;
         }).ToList();
 
@@ -311,43 +478,45 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void Connect() => ConnectTo(Selected);
 
-    /// <summary>Abre a conexão informada (usada pelos detalhes, pela lista e pelo dashboard).</summary>
-    public void ConnectTo(Connection? c)
+    /// <summary>Abre a conexão informada (usada pelos detalhes, pela lista e pelo dashboard). Retorna se abriu.</summary>
+    public bool ConnectTo(Connection? c)
     {
         if (c is null)
-            return;
+            return false;
 
         if (string.IsNullOrWhiteSpace(c.Host))
         {
             ShowStatus($"Informe o host de \"{c.Name}\" antes de conectar.", InfoBarSeverity.Warning);
-            return;
+            return false;
         }
 
         // a senha digitada no editor pertence à conexão selecionada, não necessariamente a "c"
         if (Selected is { } editing && !TryPersistPendingPassword(editing))
-            return;
+            return false;
 
         try
         {
-            var password = CredentialStore.ReadPassword(CredentialStore.KeyFor(c));
+            var password = ReadPassword(c);
 
             if (c.Protocol == ConnectionProtocol.Rdp)
             {
-                RdpLauncher.Launch(c, password);
+                RdpLauncher.Launch(c, EffectiveFullUsername(c), password);
                 ShowStatus($"Abrindo {c.Name} no Conexão de Área de Trabalho Remota…", InfoBarSeverity.Success);
             }
             else
             {
-                SshLauncher.Launch(c);
+                SshLauncher.Launch(c, CredentialFor(c)?.Username ?? c.Username);
+                var tunnelWarning = TunnelWarning(c.Tunnels);
+                var severity = tunnelWarning is null ? InfoBarSeverity.Success : InfoBarSeverity.Warning;
                 // o ssh.exe não aceita senha por argumento: deixa ela pronta para colar
                 if (password is not null && string.IsNullOrWhiteSpace(c.KeyFile))
                 {
                     CopyToClipboard(password);
-                    ShowStatus($"Abrindo {c.Name}. Senha copiada — cole com clique direito no terminal.", InfoBarSeverity.Success);
+                    ShowStatus($"Abrindo {c.Name}. Senha copiada — cole com clique direito no terminal.{tunnelWarning}", severity);
                 }
                 else
                 {
-                    ShowStatus($"Abrindo {c.Name} no terminal…", InfoBarSeverity.Success);
+                    ShowStatus($"Abrindo {c.Name} no terminal…{tunnelWarning}", severity);
                 }
             }
 
@@ -355,11 +524,69 @@ public partial class MainViewModel : ObservableObject
             c.ConnectCount++;
             _autoSaveTimer.Stop();
             SaveToDisk();
+            return true;
         }
         catch (Exception ex)
         {
             ShowStatus($"Falha ao abrir a conexão: {ex.Message}", InfoBarSeverity.Error);
+            return false;
         }
+    }
+
+    /// <summary>
+    /// Aviso (começando com espaço) sobre túneis ignorados por erro ou com porta local já em uso; null se tudo certo.
+    /// </summary>
+    private static string? TunnelWarning(string tunnelsText)
+    {
+        var (tunnels, errors) = SshTunnels.Parse(tunnelsText);
+        var parts = new List<string>();
+        if (errors.Count > 0)
+            parts.Add($"{errors.Count} {(errors.Count == 1 ? "túnel inválido foi ignorado" : "túneis inválidos foram ignorados")}");
+
+        var busy = tunnels
+            .Where(t => t.ListensLocally)
+            .Select(t => t.Port)
+            .Where(IsLocalPortInUse)
+            .Distinct()
+            .ToList();
+        if (busy.Count > 0)
+            parts.Add($"porta local já em uso: {string.Join(", ", busy)} (o túnel pode falhar)");
+
+        return parts.Count == 0 ? null : $" Atenção: {string.Join("; ", parts)}.";
+    }
+
+    private static bool IsLocalPortInUse(int port)
+    {
+        try
+        {
+            return System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties()
+                .GetActiveTcpListeners()
+                .Any(e => e.Port == port);
+        }
+        catch (System.Net.NetworkInformation.NetworkInformationException)
+        {
+            return false; // sem como verificar: não bloqueia
+        }
+    }
+
+    /// <summary>Abre todas as conexões informadas (ex.: um grupo inteiro). Ignora as que não têm host.</summary>
+    public void ConnectAll(IReadOnlyList<Connection> items, string groupName)
+    {
+        var targets = items.Where(c => !string.IsNullOrWhiteSpace(c.Host)).ToList();
+        var skipped = items.Count - targets.Count;
+        var failed = targets.Count(c => !ConnectTo(c));
+        var opened = targets.Count - failed;
+
+        var message = $"Abrindo {opened} {(opened == 1 ? "conexão" : "conexões")} de \"{groupName}\".";
+        if (skipped > 0)
+            message += $" {skipped} sem host {(skipped == 1 ? "foi ignorada" : "foram ignoradas")}.";
+        if (failed > 0)
+            message += $" {failed} {(failed == 1 ? "falhou" : "falharam")}.";
+        // várias SSH com senha: a área de transferência fica só com a última
+        if (targets.Count(c => c.Protocol == ConnectionProtocol.Ssh && string.IsNullOrWhiteSpace(c.KeyFile)) > 1)
+            message += " Senhas SSH: a área de transferência guarda só a da última.";
+
+        ShowStatus(message, skipped + failed > 0 ? InfoBarSeverity.Warning : InfoBarSeverity.Success);
     }
 
     [RelayCommand]
@@ -390,7 +617,7 @@ public partial class MainViewModel : ObservableObject
         if (Selected is not { } c)
             return;
 
-        var pwd = !string.IsNullOrEmpty(Password) ? Password : CredentialStore.ReadPassword(CredentialStore.KeyFor(c));
+        var pwd = !string.IsNullOrEmpty(Password) ? Password : ReadPassword(c);
         if (pwd is null)
         {
             ShowStatus("Nenhuma senha salva para esta conexão.", InfoBarSeverity.Warning);
@@ -467,6 +694,7 @@ public partial class MainViewModel : ObservableObject
         {
             await Task.WhenAll(targets.Select(CheckOne));
             LastCheckedAt = DateTime.Now;
+            NotifyFavoriteChanges();
         }
         catch (OperationCanceledException)
         {
@@ -480,6 +708,47 @@ public partial class MainViewModel : ObservableObject
                 UpdateStatusSummary();
             }
         }
+    }
+
+    // --- Monitoramento contínuo ---
+
+    /// <summary>Favoritos que caíram ou voltaram na última verificação (só com o monitoramento ligado).</summary>
+    public event EventHandler<IReadOnlyList<(Connection Connection, bool IsOnline)>>? FavoritesStatusChanged;
+
+    /// <summary>Liga/desliga o monitoramento conforme as preferências (chamado ao abrir e ao mudar a opção).</summary>
+    public void ApplyMonitorSettings()
+    {
+        _monitorTimer.Stop();
+        if (!App.Settings.MonitorEnabled)
+            return;
+
+        _monitorTimer.Interval = TimeSpan.FromMinutes(Math.Clamp(App.Settings.MonitorIntervalMinutes, 1, 120));
+        _monitorTimer.Start();
+        CheckStatusIfStale();
+    }
+
+    private void NotifyFavoriteChanges()
+    {
+        var current = _connections
+            .Where(c => c.Status is ReachabilityStatus.Online or ReachabilityStatus.Offline)
+            .Select(c => new StatusChange(c.Id, c.Status == ReachabilityStatus.Online))
+            .ToList();
+
+        var changes = StatusTransitions.Detect(_lastKnownStatus, current);
+        foreach (var c in current)
+            _lastKnownStatus[c.Id] = c.IsOnline;
+
+        if (!App.Settings.MonitorEnabled || changes.Count == 0)
+            return;
+
+        var favorites = changes
+            .Select(ch => (Connection: _connections.FirstOrDefault(c => c.Id == ch.Id), ch.IsOnline))
+            .Where(x => x.Connection is { IsFavorite: true })
+            .Select(x => (x.Connection!, x.IsOnline))
+            .ToList();
+
+        if (favorites.Count > 0)
+            FavoritesStatusChanged?.Invoke(this, favorites);
     }
 
     private void UpdateStatusSummary()

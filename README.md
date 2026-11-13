@@ -14,21 +14,32 @@ Windows, nunca em arquivo.
   permite **Criar e conectar** direto. As opções avançadas ficam em **Editar**.
 - **Importar** conexões (botão ao lado de "Nova conexão"), com revisão antes de adicionar. Itens já
   cadastrados ficam desmarcados. Fontes aceitas:
+  - **backup do RemoteMan** (`.json`), mantendo os grupos;
   - arquivos **`.rdp`** (vários de uma vez): host, porta, usuário/domínio, resolução, monitores, área de
-    transferência, unidades e sessão admin;
-  - **`~/.ssh/config`** ou outro arquivo no mesmo formato: `Host`, `HostName`, `User`, `Port` e
-    `IdentityFile` e `ProxyJump`, respeitando os padrões de `Host *`;
+    transferência, unidades, sessão admin e RD Gateway;
+  - **`~/.ssh/config`** ou outro arquivo no mesmo formato: `Host`, `HostName`, `User`, `Port`,
+    `IdentityFile`, `ProxyJump` e `LocalForward`/`RemoteForward`/`DynamicForward`, respeitando os
+    padrões de `Host *`;
   - **sessões SSH do PuTTY** (chaves `.ppk` não são importadas: converta no PuTTYgen).
 
   Senhas nunca são importadas.
+- **Exportar** (mesmo botão): backup do RemoteMan em `.json` (todas as conexões ou um grupo, pelo menu do
+  grupo), arquivos `.rdp` das conexões RDP e perfis SSH no formato do `ssh config`. Senhas nunca são
+  exportadas.
 - **Conexão rápida** (**Ctrl+K** em qualquer tela): digite parte do nome, host, grupo ou usuário, escolha
   com as setas e conecte com Enter. Favoritos e conexões recentes aparecem primeiro.
-- **Lista de conexões** agrupada, com busca por nome, host, grupo ou usuário.
+- **Lista de conexões** agrupada, com busca por nome, host, grupo ou usuário. O menu de cada grupo
+  (⋯ ou clique direito) permite **conectar a todas** de uma vez.
+- **Credenciais compartilhadas** (em Configurações): usuário e senha cadastrados uma vez e usados por
+  várias conexões. Trocar a senha vale para todas.
 - **Detalhes da conexão** em modo leitura, com botões **Conectar** e **Editar**. No modo edição, as
   alterações são salvas automaticamente (Ctrl+S grava na hora).
 - **Configurações**: efeito de fundo da janela (**Mica**, **Mica Alt** ou **Acrílico** com desfoque, com
-  fallback automático onde o Windows não suporta), verificação de atualizações, usuário do Windows,
+  fallback automático onde o Windows não suporta), credenciais compartilhadas, monitoramento,
+  verificação de atualizações, usuário do Windows,
   OpenSSH, Windows Terminal e caminho do arquivo de dados.
+- **Monitoramento contínuo** (opcional): verifica o status a cada 1, 5, 15 ou 30 minutos e mostra uma
+  notificação do Windows quando um servidor favorito cai ou volta. Funciona com o app aberto.
 - **Aviso de nova versão**: ao abrir (no máximo uma vez por dia), o app consulta o último release no
   GitHub e, se houver versão nova, oferece baixar o instalador (ou o zip portátil, se for o caso).
 - Em todas as listas, clicar numa conexão abre os detalhes e o botão ▶ conecta. Na tela Conexões, o
@@ -38,9 +49,11 @@ Windows, nunca em arquivo.
   - Login automático com a senha salva (credencial `TERMSRV/host`).
   - Opção de usar o usuário do Windows da sessão atual.
   - Tela cheia ou resolução fixa, vários monitores, área de transferência, unidades locais e sessão `/admin`.
+  - RD Gateway, com opção de ignorar para endereços locais e de usar as mesmas credenciais.
 - **SSH**
   - Abre uma nova aba no Windows Terminal ou, se ele não estiver instalado, uma janela do `ssh.exe`.
-  - Suporta porta personalizada, chave privada (`-i`) e jump host / ProxyJump (`-J`).
+  - Suporta porta personalizada, chave privada (`-i`), jump host / ProxyJump (`-J`) e túneis local
+    (`-L`), remoto (`-R`) e SOCKS (`-D`), com aviso de porta local já em uso.
 - **Favoritos**, contador de uso, duplicar e excluir conexões, notas livres por conexão.
 
 ## Requisitos
@@ -114,7 +127,8 @@ cz bump --dry-run                        # mostra qual seria a próxima versão
 |---|---|
 | Conexões (sem senhas) | `%LOCALAPPDATA%\RemoteMan\connections.json` |
 | Preferências | `%LOCALAPPDATA%\RemoteMan\settings.json` |
-| Senhas | Gerenciador de Credenciais do Windows, como `RemoteMan/<id da conexão>` |
+| Credenciais compartilhadas (sem senhas) | `%LOCALAPPDATA%\RemoteMan\credentials.json` |
+| Senhas | Gerenciador de Credenciais do Windows, como `RemoteMan/<id da conexão>` ou `RemoteMan/cred/<id da credencial>` |
 | Credencial usada pelo `mstsc` | Gerenciador de Credenciais do Windows, como `TERMSRV/<host>` |
 | Arquivos `.rdp` temporários | `%TEMP%\RemoteMan\` (não contêm senha) |
 
@@ -152,6 +166,7 @@ RemoteMan/
 │   ├── NewConnectionDialog  # diálogo de criação com os campos essenciais
 │   ├── ImportDialog         # revisão das conexões encontradas antes de importar
 │   ├── QuickConnectDialog   # conexão rápida (Ctrl+K)
+│   ├── CredentialDialog     # cria/edita credencial compartilhada
 │   └── SettingsPage         # ambiente e informações do app
 ├── Controls/
 │   ├── ConnectionItem       # linha padrão de conexão usada em todas as listas
@@ -164,13 +179,19 @@ RemoteMan/
 ├── Models/
 │   ├── Connection           # modelo de uma conexão
 │   ├── ConnectionAddress    # interpreta o endereço digitado (host:porta, usuario@host…)
-│   ├── ImportedConnection   # conexão lida de uma fonte externa, antes de ser adicionada
+│   ├── ImportedConnection   # formato neutro de importação/exportação (sem senhas)
+│   ├── SharedCredential     # credencial compartilhada entre conexões
 │   └── AppSettings          # preferências (efeito de fundo)
 ├── Services/
-│   ├── Importers/           # parsers puros de .rdp, ~/.ssh/config e sessões do PuTTY
+│   ├── Importers/           # leitura/escrita de .rdp, ssh config, PuTTY e backup .json
 │   ├── ImportSources        # lê os arquivos e o registro e chama os parsers
 │   ├── ConnectionStore      # leitura/gravação do connections.json
 │   ├── SettingsStore        # leitura/gravação do settings.json
+│   ├── SharedCredentialStore # leitura/gravação do credentials.json
+│   ├── RdpFileBuilder       # monta o conteúdo do .rdp (inclui RD Gateway)
+│   ├── SshTunnels           # túneis -L/-R/-D
+│   ├── StatusTransitions    # detecta quedas e retornos (monitoramento)
+│   ├── Notifier             # notificações do Windows
 │   ├── CredentialStore      # Gerenciador de Credenciais (advapi32)
 │   ├── RdpLauncher          # gera o .rdp e abre o mstsc
 │   ├── SshLauncher          # abre o ssh no Windows Terminal ou console

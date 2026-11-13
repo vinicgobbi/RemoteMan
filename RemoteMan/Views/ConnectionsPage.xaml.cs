@@ -23,15 +23,54 @@ public sealed partial class ConnectionsPage : Page
         ViewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(MainViewModel.Selected))
+            {
                 SyncListSelection();
+                SyncCredentialBox();
+            }
         };
+        ViewModel.CredentialsChanged += (_, _) => RebuildCredentialOptions();
+        RebuildCredentialOptions();
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
         SyncListSelection();
+        RebuildCredentialOptions(); // pode ter mudado em Configurações
         ViewModel.CheckStatusIfStale();
+    }
+
+    // --- Seletor de credencial (itens: "própria" + compartilhadas; Ids em lista paralela) ---
+
+    private readonly List<Guid?> _credentialIds = [];
+    private bool _syncingCredential;
+
+    private void RebuildCredentialOptions()
+    {
+        _syncingCredential = true;
+        _credentialIds.Clear();
+        _credentialIds.Add(null);
+        _credentialIds.AddRange(ViewModel.Credentials.Select(c => (Guid?)c.Id));
+        CredentialBox.ItemsSource = new[] { "Usuário e senha desta conexão" }
+            .Concat(ViewModel.Credentials.Select(c => c.DisplayText))
+            .ToList();
+        _syncingCredential = false;
+        SyncCredentialBox();
+    }
+
+    private void SyncCredentialBox()
+    {
+        _syncingCredential = true;
+        var index = _credentialIds.IndexOf(ViewModel.Selected?.CredentialId);
+        CredentialBox.SelectedIndex = index < 0 ? 0 : index;
+        _syncingCredential = false;
+    }
+
+    private void Credential_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_syncingCredential || ViewModel.Selected is not { } c || CredentialBox.SelectedIndex < 0)
+            return;
+        c.CredentialId = _credentialIds[CredentialBox.SelectedIndex];
     }
 
     private void SyncListSelection()
@@ -77,6 +116,45 @@ public sealed partial class ConnectionsPage : Page
     {
         if (sender is MenuFlyoutItem { Tag: string tag } && Enum.TryParse<ImportSource>(tag, out var source))
             await App.MainWindow.ImportAsync(source);
+    }
+
+    private async void Export_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: string tag } && Enum.TryParse<ExportKind>(tag, out var kind))
+            await App.MainWindow.ExportAsync(kind);
+    }
+
+    private async void ExportGroup_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: ConnectionGroup group })
+            // exporta o grupo inteiro, não só o que a busca atual está mostrando
+            await App.MainWindow.ExportAsync(ExportKind.Backup, ViewModel.ConnectionsInGroup(group.Key), group.Key);
+    }
+
+    // acima disso, pede confirmação antes de abrir tudo
+    private const int ConnectAllConfirmThreshold = 5;
+
+    private async void ConnectGroup_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: ConnectionGroup group } || group.Count == 0)
+            return;
+
+        if (group.Count > ConnectAllConfirmThreshold)
+        {
+            var dialog = new ContentDialog
+            {
+                XamlRoot = XamlRoot,
+                Title = "Conectar a todas",
+                Content = $"Abrir {group.Count} conexões do grupo \"{group.Key}\" de uma vez?",
+                PrimaryButtonText = "Conectar",
+                CloseButtonText = "Cancelar",
+                DefaultButton = ContentDialogButton.Primary,
+            };
+            if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+                return;
+        }
+
+        ViewModel.ConnectAll(group.ToList(), group.Key);
     }
 
     private async void Delete_Click(object sender, RoutedEventArgs e)

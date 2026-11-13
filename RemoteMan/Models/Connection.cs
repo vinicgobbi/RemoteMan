@@ -27,6 +27,9 @@ public partial class Connection : ObservableObject
         Domain = string.Empty;
         KeyFile = string.Empty;
         JumpHost = string.Empty;
+        Tunnels = string.Empty;
+        GatewayHost = string.Empty;
+        GatewayUseSameCredentials = true;
         Notes = string.Empty;
         Port = 3389;
         FullScreen = true;
@@ -53,6 +56,9 @@ public partial class Connection : ObservableObject
     [JsonIgnore]
     [ObservableProperty] public partial ReachabilityStatus Status { get; set; }
 
+    /// <summary>Credencial compartilhada usada por esta conexão (null = usuário e senha próprios).</summary>
+    [ObservableProperty] public partial Guid? CredentialId { get; set; }
+
     // --- RDP ---
     /// <summary>Conecta com o usuário logado no Windows em vez de usuário/senha salvos.</summary>
     [ObservableProperty] public partial bool UseWindowsCredentials { get; set; }
@@ -65,11 +71,23 @@ public partial class Connection : ObservableObject
     [ObservableProperty] public partial bool RedirectDrives { get; set; }
     [ObservableProperty] public partial bool AdminSession { get; set; }
 
+    /// <summary>Servidor RD Gateway (vazio = conexão direta).</summary>
+    [ObservableProperty] public partial string GatewayHost { get; set; }
+
+    /// <summary>Não usa o gateway para endereços da rede local.</summary>
+    [ObservableProperty] public partial bool GatewayBypassLocal { get; set; }
+
+    /// <summary>Mesmas credenciais no gateway e no computador remoto.</summary>
+    [ObservableProperty] public partial bool GatewayUseSameCredentials { get; set; }
+
     // --- SSH ---
     [ObservableProperty] public partial string KeyFile { get; set; }
 
     /// <summary>Servidor(es) intermediário(s) para o ssh -J (ex.: "bastion" ou "user@gw:2222,outro").</summary>
     [ObservableProperty] public partial string JumpHost { get; set; }
+
+    /// <summary>Túneis SSH, um por linha (ex.: "L 8080:localhost:80", "D 1080"). Ver Services.SshTunnels.</summary>
+    [ObservableProperty] public partial string Tunnels { get; set; }
 
     /// <summary>Cópia com novo Id (não usa MemberwiseClone para não copiar os handlers de PropertyChanged).</summary>
     public Connection Clone() => new()
@@ -82,6 +100,7 @@ public partial class Connection : ObservableObject
         Username = Username,
         Notes = Notes,
         UseWindowsCredentials = UseWindowsCredentials,
+        CredentialId = CredentialId,
         Domain = Domain,
         FullScreen = FullScreen,
         DesktopWidth = DesktopWidth,
@@ -92,6 +111,10 @@ public partial class Connection : ObservableObject
         AdminSession = AdminSession,
         KeyFile = KeyFile,
         JumpHost = JumpHost,
+        Tunnels = Tunnels,
+        GatewayHost = GatewayHost,
+        GatewayBypassLocal = GatewayBypassLocal,
+        GatewayUseSameCredentials = GatewayUseSameCredentials,
     };
 
     /// <summary>Usuário no formato DOMINIO\usuario quando houver domínio.</summary>

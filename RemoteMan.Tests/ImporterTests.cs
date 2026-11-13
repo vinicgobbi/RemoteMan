@@ -59,11 +59,24 @@ public class RdpFileParserTests
     }
 
     [Fact]
-    public void AvisaSobreGateway()
+    public void ImportaGateway()
     {
-        const string rdp = "full address:s:srv\ngatewayhostname:s:gw.empresa.com\ngatewayusagemethod:i:1";
+        const string rdp = "full address:s:srv\ngatewayhostname:s:gw.empresa.com\ngatewayusagemethod:i:2\npromptcredentialonce:i:0";
         Assert.True(RdpFileParser.TryParse("x", rdp, out var c, out _));
-        Assert.Contains("Gateway", c.Warning);
+        Assert.Equal("gw.empresa.com", c.GatewayHost);
+        Assert.True(c.GatewayBypassLocal);
+        Assert.False(c.GatewayUseSameCredentials);
+        Assert.Null(c.Warning);
+    }
+
+    [Theory]
+    [InlineData("gatewayusagemethod:i:0")] // gateway configurado mas desativado
+    [InlineData("gatewayusagemethod:i:4")] // "detectar automaticamente": tratado como sem gateway
+    public void IgnoraGatewayDesativado(string method)
+    {
+        Assert.True(RdpFileParser.TryParse("x", $"full address:s:srv\ngatewayhostname:s:gw\n{method}", out var c, out _));
+        Assert.Equal("", c.GatewayHost);
+        Assert.Null(c.GatewayBypassLocal);
     }
 
     [Theory]

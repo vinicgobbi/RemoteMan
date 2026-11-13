@@ -14,11 +14,20 @@ public sealed record ImportedConnection
     public string Username { get; init; } = string.Empty;
     public string Domain { get; init; } = string.Empty;
 
+    /// <summary>Grupo de origem (backup do RemoteMan); vazio nas demais fontes.</summary>
+    public string Group { get; init; } = string.Empty;
+    public string Notes { get; init; } = string.Empty;
+    public bool IsFavorite { get; init; }
+    public bool? UseWindowsCredentials { get; init; }
+
     /// <summary>Chave privada (SSH).</summary>
     public string KeyFile { get; init; } = string.Empty;
 
     /// <summary>Jump host para o ssh -J (SSH).</summary>
     public string JumpHost { get; init; } = string.Empty;
+
+    /// <summary>Túneis SSH, um por linha (formato de Services.SshTunnels).</summary>
+    public string Tunnels { get; init; } = string.Empty;
 
     // --- RDP ---
     public bool? FullScreen { get; init; }
@@ -28,6 +37,9 @@ public sealed record ImportedConnection
     public bool? RedirectClipboard { get; init; }
     public bool? RedirectDrives { get; init; }
     public bool? AdminSession { get; init; }
+    public string GatewayHost { get; init; } = string.Empty;
+    public bool? GatewayBypassLocal { get; init; }
+    public bool? GatewayUseSameCredentials { get; init; }
 
     /// <summary>Algo que não pôde ser importado (ex.: chave .ppk, RD Gateway).</summary>
     public string? Warning { get; init; }

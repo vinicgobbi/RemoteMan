@@ -4,7 +4,8 @@ namespace RemoteMan.Services;
 /// <remarks>Classe pura (sem WinUI) para poder ser testada isoladamente.</remarks>
 public static class SshArguments
 {
-    public static List<string> Build(string host, int port, string? username, string? keyFile, string? jumpHost)
+    public static List<string> Build(
+        string host, int port, string? username, string? keyFile, string? jumpHost, IEnumerable<SshTunnel>? tunnels = null)
     {
         var args = new List<string>();
         if (port is > 0 and not 22)
@@ -21,6 +22,11 @@ public static class SshArguments
         {
             args.Add("-J");
             args.Add(jump);
+        }
+        foreach (var tunnel in tunnels ?? [])
+        {
+            args.Add(tunnel.Option);
+            args.Add(tunnel.Spec);
         }
 
         host = host.Trim();
