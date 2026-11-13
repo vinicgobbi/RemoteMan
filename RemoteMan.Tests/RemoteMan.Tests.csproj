@@ -22,6 +22,8 @@
     -->
     <Compile Include="..\RemoteMan\Models\ConnectionProtocol.cs" Link="App\ConnectionProtocol.cs" />
     <Compile Include="..\RemoteMan\Models\ConnectionAddress.cs" Link="App\ConnectionAddress.cs" />
+    <Compile Include="..\RemoteMan\Models\ImportedConnection.cs" Link="App\ImportedConnection.cs" />
+    <Compile Include="..\RemoteMan\Services\Importers\*.cs" Link="App\Importers\%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
