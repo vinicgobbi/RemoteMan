@@ -33,6 +33,9 @@ public partial class MainViewModel : ObservableObject
     private readonly DispatcherQueue _dispatcher = DispatcherQueue.GetForCurrentThread();
     private readonly DispatcherQueueTimer _autoSaveTimer;
     private readonly DispatcherQueueTimer _statusTimer;
+    private readonly DispatcherQueueTimer _monitorTimer;
+    // último estado conhecido (true = online) de cada servidor, para detectar quedas e retornos
+    private readonly Dictionary<Guid, bool> _lastKnownStatus = [];
     private CancellationTokenSource? _checkCts;
     private bool _listDirty;
 
@@ -52,6 +55,14 @@ public partial class MainViewModel : ObservableObject
         _statusTimer.Interval = StatusAutoClose;
         _statusTimer.IsRepeating = false;
         _statusTimer.Tick += (_, _) => IsStatusOpen = false;
+
+        _monitorTimer = _dispatcher.CreateTimer();
+        _monitorTimer.IsRepeating = true;
+        _monitorTimer.Tick += (_, _) =>
+        {
+            if (!IsChecking)
+                _ = CheckStatusAsync();
+        };
 
         try
         {
@@ -573,6 +584,7 @@ public partial class MainViewModel : ObservableObject
         {
             await Task.WhenAll(targets.Select(CheckOne));
             LastCheckedAt = DateTime.Now;
+            NotifyFavoriteChanges();
         }
         catch (OperationCanceledException)
         {
@@ -586,6 +598,47 @@ public partial class MainViewModel : ObservableObject
                 UpdateStatusSummary();
             }
         }
+    }
+
+    // --- Monitoramento contínuo ---
+
+    /// <summary>Favoritos que caíram ou voltaram na última verificação (só com o monitoramento ligado).</summary>
+    public event EventHandler<IReadOnlyList<(Connection Connection, bool IsOnline)>>? FavoritesStatusChanged;
+
+    /// <summary>Liga/desliga o monitoramento conforme as preferências (chamado ao abrir e ao mudar a opção).</summary>
+    public void ApplyMonitorSettings()
+    {
+        _monitorTimer.Stop();
+        if (!App.Settings.MonitorEnabled)
+            return;
+
+        _monitorTimer.Interval = TimeSpan.FromMinutes(Math.Clamp(App.Settings.MonitorIntervalMinutes, 1, 120));
+        _monitorTimer.Start();
+        CheckStatusIfStale();
+    }
+
+    private void NotifyFavoriteChanges()
+    {
+        var current = _connections
+            .Where(c => c.Status is ReachabilityStatus.Online or ReachabilityStatus.Offline)
+            .Select(c => new StatusChange(c.Id, c.Status == ReachabilityStatus.Online))
+            .ToList();
+
+        var changes = StatusTransitions.Detect(_lastKnownStatus, current);
+        foreach (var c in current)
+            _lastKnownStatus[c.Id] = c.IsOnline;
+
+        if (!App.Settings.MonitorEnabled || changes.Count == 0)
+            return;
+
+        var favorites = changes
+            .Select(ch => (Connection: _connections.FirstOrDefault(c => c.Id == ch.Id), ch.IsOnline))
+            .Where(x => x.Connection is { IsFavorite: true })
+            .Select(x => (x.Connection!, x.IsOnline))
+            .ToList();
+
+        if (favorites.Count > 0)
+            FavoritesStatusChanged?.Invoke(this, favorites);
     }
 
     private void UpdateStatusSummary()

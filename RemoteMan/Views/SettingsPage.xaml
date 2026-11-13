@@ -39,6 +39,27 @@
 
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel Spacing="4">
+                        <TextBlock Text="Monitoramento" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,4" />
+                        <c:FieldRow Label="Monitorar servidores" Description="Verifica o status periodicamente e avisa quando um favorito cai ou volta. Funciona com o app aberto.">
+                            <c:FieldRow.Action>
+                                <ToggleSwitch x:Name="MonitorSwitch" Style="{StaticResource RowToggleSwitchStyle}" Toggled="Monitor_Toggled" />
+                            </c:FieldRow.Action>
+                        </c:FieldRow>
+                        <c:FieldRow Label="Intervalo">
+                            <c:FieldRow.Action>
+                                <ComboBox x:Name="MonitorIntervalBox" MinWidth="160" SelectionChanged="MonitorInterval_SelectionChanged">
+                                    <ComboBoxItem Content="1 minuto" Tag="1" />
+                                    <ComboBoxItem Content="5 minutos" Tag="5" />
+                                    <ComboBoxItem Content="15 minutos" Tag="15" />
+                                    <ComboBoxItem Content="30 minutos" Tag="30" />
+                                </ComboBox>
+                            </c:FieldRow.Action>
+                        </c:FieldRow>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="4">
                         <TextBlock Text="Atualizações" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,4" />
                         <c:FieldRow Label="Verificar ao abrir" Description="Consulta o GitHub no máximo uma vez por dia.">
                             <c:FieldRow.Action>

@@ -30,7 +30,11 @@ public sealed partial class MainWindow : Window
         ApplyBackdrop(App.Settings.Backdrop);
         AppWindow.Resize(new SizeInt32(1280, 820));
 
-        Closed += (_, _) => ViewModel.SaveAll();
+        Closed += (_, _) =>
+        {
+            ViewModel.SaveAll();
+            Notifier.Unregister();
+        };
 
         // tela inicial: dashboard
         NavView.SelectedItem = HomeNavItem;
@@ -73,6 +77,16 @@ public sealed partial class MainWindow : Window
 
     /// <summary>Material de fundo em uso (null = nenhum).</summary>
     public BackdropKind? AppliedBackdrop { get; private set; }
+
+    /// <summary>Clique numa notificação: traz a janela para frente e mostra a conexão (se houver).</summary>
+    public void ShowFromNotification(Guid? connectionId)
+    {
+        if (connectionId is { } id && ViewModel.Connections.FirstOrDefault(c => c.Id == id) is { } c)
+            ShowConnections(c);
+        else
+            ShowConnections();
+        Activate();
+    }
 
     /// <summary>Vai para o dashboard.</summary>
     public void ShowDashboard() => NavView.SelectedItem = HomeNavItem;

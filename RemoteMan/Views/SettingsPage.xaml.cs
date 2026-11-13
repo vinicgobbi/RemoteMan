@@ -18,6 +18,12 @@ public sealed partial class SettingsPage : Page
         _loading = true;
         BackdropBox.SelectedIndex = (int)App.Settings.Backdrop;
         CheckUpdatesSwitch.IsOn = App.Settings.CheckForUpdates;
+        MonitorSwitch.IsOn = App.Settings.MonitorEnabled;
+        MonitorIntervalBox.SelectedItem = MonitorIntervalBox.Items
+            .OfType<ComboBoxItem>()
+            .FirstOrDefault(i => (string)i.Tag == App.Settings.MonitorIntervalMinutes.ToString())
+            ?? MonitorIntervalBox.Items[1];
+        MonitorIntervalBox.IsEnabled = MonitorSwitch.IsOn;
         _loading = false;
         ShowBackdropNote(App.Settings.Backdrop, App.MainWindow.AppliedBackdrop);
     }
@@ -32,6 +38,25 @@ public sealed partial class SettingsPage : Page
 
         App.Settings.Backdrop = requested;
         SaveSettings();
+    }
+
+    private void Monitor_Toggled(object sender, RoutedEventArgs e)
+    {
+        MonitorIntervalBox.IsEnabled = MonitorSwitch.IsOn;
+        if (_loading)
+            return;
+        App.Settings.MonitorEnabled = MonitorSwitch.IsOn;
+        SaveSettings();
+        App.ViewModel.ApplyMonitorSettings();
+    }
+
+    private void MonitorInterval_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || MonitorIntervalBox.SelectedItem is not ComboBoxItem { Tag: string tag } || !int.TryParse(tag, out var minutes))
+            return;
+        App.Settings.MonitorIntervalMinutes = minutes;
+        SaveSettings();
+        App.ViewModel.ApplyMonitorSettings();
     }
 
     private void CheckUpdates_Toggled(object sender, RoutedEventArgs e)
