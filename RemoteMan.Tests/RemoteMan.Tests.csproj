@@ -25,6 +25,7 @@
     <Compile Include="..\RemoteMan\Models\ImportedConnection.cs" Link="App\ImportedConnection.cs" />
     <Compile Include="..\RemoteMan\Services\Importers\*.cs" Link="App\Importers\%(Filename)%(Extension)" />
     <Compile Include="..\RemoteMan\Services\SshArguments.cs" Link="App\SshArguments.cs" />
+    <Compile Include="..\RemoteMan\Services\UpdateRelease.cs" Link="App\UpdateRelease.cs" />
   </ItemGroup>
 
 </Project>
