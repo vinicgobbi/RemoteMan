@@ -12,10 +12,21 @@ Windows, nunca em arquivo.
 - **Nova conexão** (botão ou Ctrl+N) num diálogo curto: tipo, endereço, usuário/senha e grupo. Aceita
   `servidor:porta`, `usuario@servidor` e `DOMINIO\usuario`, avisa se o endereço já está cadastrado e
   permite **Criar e conectar** direto. As opções avançadas ficam em **Editar**.
+- **Importar** conexões (botão ao lado de "Nova conexão"), com revisão antes de adicionar. Itens já
+  cadastrados ficam desmarcados. Fontes aceitas:
+  - arquivos **`.rdp`** (vários de uma vez): host, porta, usuário/domínio, resolução, monitores, área de
+    transferência, unidades e sessão admin;
+  - **`~/.ssh/config`** ou outro arquivo no mesmo formato: `Host`, `HostName`, `User`, `Port` e
+    `IdentityFile`, respeitando os padrões de `Host *`;
+  - **sessões SSH do PuTTY** (chaves `.ppk` não são importadas: converta no PuTTYgen).
+
+  Senhas nunca são importadas.
 - **Lista de conexões** agrupada, com busca por nome, host, grupo ou usuário.
 - **Detalhes da conexão** em modo leitura, com botões **Conectar** e **Editar**. No modo edição, as
   alterações são salvas automaticamente (Ctrl+S grava na hora).
-- **Configurações**: usuário do Windows, OpenSSH, Windows Terminal e caminho do arquivo de dados.
+- **Configurações**: efeito de fundo da janela (**Mica**, **Mica Alt** ou **Acrílico** com desfoque, com
+  fallback automático onde o Windows não suporta), usuário do Windows, OpenSSH, Windows Terminal e
+  caminho do arquivo de dados.
 - Em todas as listas, clicar numa conexão abre os detalhes e o botão ▶ conecta. Na tela Conexões, o
   duplo clique também conecta.
 - **RDP**
@@ -98,6 +109,7 @@ cz bump --dry-run                        # mostra qual seria a próxima versão
 | O quê | Onde |
 |---|---|
 | Conexões (sem senhas) | `%LOCALAPPDATA%\RemoteMan\connections.json` |
+| Preferências | `%LOCALAPPDATA%\RemoteMan\settings.json` |
 | Senhas | Gerenciador de Credenciais do Windows, como `RemoteMan/<id da conexão>` |
 | Credencial usada pelo `mstsc` | Gerenciador de Credenciais do Windows, como `TERMSRV/<host>` |
 | Arquivos `.rdp` temporários | `%TEMP%\RemoteMan\` (não contêm senha) |
@@ -131,6 +143,7 @@ RemoteMan/
 │   ├── DashboardPage        # tela inicial
 │   ├── ConnectionsPage      # lista, detalhes e editor de conexões
 │   ├── NewConnectionDialog  # diálogo de criação com os campos essenciais
+│   ├── ImportDialog         # revisão das conexões encontradas antes de importar
 │   └── SettingsPage         # ambiente e informações do app
 ├── Controls/
 │   ├── ConnectionItem       # linha padrão de conexão usada em todas as listas
@@ -138,12 +151,18 @@ RemoteMan/
 ├── ViewModels/
 │   ├── MainViewModel        # conexões, seleção, edição, salvamento e status (CommunityToolkit.Mvvm)
 │   ├── DashboardViewModel   # favoritos, recentes e resumo do Início
-│   └── ConnectionGroup      # agrupamento da lista
+│   ├── ConnectionGroup      # agrupamento da lista
+│   └── ImportItem           # linha da lista de importação
 ├── Models/
 │   ├── Connection           # modelo de uma conexão
-│   └── ConnectionAddress    # interpreta o endereço digitado (host:porta, usuario@host…)
+│   ├── ConnectionAddress    # interpreta o endereço digitado (host:porta, usuario@host…)
+│   ├── ImportedConnection   # conexão lida de uma fonte externa, antes de ser adicionada
+│   └── AppSettings          # preferências (efeito de fundo)
 ├── Services/
+│   ├── Importers/           # parsers puros de .rdp, ~/.ssh/config e sessões do PuTTY
+│   ├── ImportSources        # lê os arquivos e o registro e chama os parsers
 │   ├── ConnectionStore      # leitura/gravação do connections.json
+│   ├── SettingsStore        # leitura/gravação do settings.json
 │   ├── CredentialStore      # Gerenciador de Credenciais (advapi32)
 │   ├── RdpLauncher          # gera o .rdp e abre o mstsc
 │   ├── SshLauncher          # abre o ssh no Windows Terminal ou console
