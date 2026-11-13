@@ -70,7 +70,18 @@ controlada pelo [Commitizen](https://commitizen-tools.github.io/commitizen/) (`.
 |---|---|---|
 | `ci.yml` | Pull requests | Valida as mensagens de commit (`cz check`), roda os testes e compila x64/ARM64 |
 | `bump.yml` | Push na `main` | Roda o CI; se houver `feat`, `fix`, `perf`, `refactor` ou `!`, faz o `cz bump` (versão no `.csproj`, `CHANGELOG.md` e tag `vX.Y.Z`) e chama o release |
-| `release.yml` | Chamado pelo bump ou push de tag `v*` | Publica os `.zip` self-contained (x64 e ARM64) e cria o GitHub Release com as notas do CHANGELOG |
+| `release.yml` | Chamado pelo bump ou push de tag `v*` | Gera o instalador e o zip portátil (x64 e ARM64) e cria o GitHub Release com as notas do CHANGELOG |
+
+Cada release traz, por plataforma:
+
+- `RemoteMan-Setup-X.Y.Z-x64.exe` (ou `-arm64`): **instalador**. Instala por usuário, sem pedir
+  administrador, em `%LOCALAPPDATA%\Programs\RemoteMan`, cria atalho no Menu Iniciar e atualiza por cima da
+  versão anterior. Gerado com [Inno Setup](https://jrsoftware.org/isinfo.php) a partir de
+  `installer/RemoteMan.iss`.
+- `RemoteMan-X.Y.Z-x64-portable.zip`: versão **portátil**. Basta extrair e abrir o `RemoteMan.exe`.
+
+> O WinUI 3 não funciona com `PublishSingleFile` (o app quebra ao iniciar), por isso não há um `.exe`
+> único sem instalação. Os executáveis não são assinados, então o SmartScreen pode exibir um aviso.
 
 Enquanto a versão for `0.x`, `feat` sobe a *minor* e `fix`/`perf`/`refactor` sobem a *patch*. Commits
 `docs`, `chore`, `ci`, `test` etc. não geram versão.
