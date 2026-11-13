@@ -4,3 +4,7 @@ obj/
 *.user
 *.suo
 AppPackages/
+
+# saída local do publish e do instalador
+publish/
+dist/
