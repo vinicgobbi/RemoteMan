@@ -195,7 +195,7 @@ public sealed partial class MainWindow : Window
                     var path = await PickSaveFileAsync($"RemoteMan-backup-{suffix}", "Backup do RemoteMan", ".json");
                     if (path is null)
                         return;
-                    await File.WriteAllTextAsync(path, BackupFile.Serialize(source.Select(MainViewModel.ToImported), now));
+                    await File.WriteAllTextAsync(path, BackupFile.Serialize(source.Select(ViewModel.ToImported), now));
                     ViewModel.ShowStatus($"{Plural(source.Count)} {(source.Count == 1 ? "exportada" : "exportadas")} para {Path.GetFileName(path)} (sem senhas).", InfoBarSeverity.Success);
                     return;
                 }
@@ -212,7 +212,7 @@ public sealed partial class MainWindow : Window
                         Directory.EnumerateFiles(folder, "*.rdp").Select(Path.GetFileName)!, StringComparer.OrdinalIgnoreCase);
                     foreach (var c in source)
                     {
-                        var content = RdpFileBuilder.Build(RdpLauncher.OptionsFor(c, RdpLauncher.ExportUsername(c)));
+                        var content = RdpFileBuilder.Build(RdpLauncher.OptionsFor(c, ViewModel.ExportUsername(c)));
                         // UTF-16 com BOM, como o mstsc grava
                         await File.WriteAllTextAsync(Path.Combine(folder, ExportNames.FileName(c.Name, ".rdp", used)), content, System.Text.Encoding.Unicode);
                     }
@@ -228,7 +228,7 @@ public sealed partial class MainWindow : Window
                     var path = await PickSaveFileAsync($"ssh_config-remoteman-{suffix}", "Configuração SSH", ".conf");
                     if (path is null)
                         return;
-                    await File.WriteAllTextAsync(path, SshConfigWriter.Write(source.Select(MainViewModel.ToImported), now));
+                    await File.WriteAllTextAsync(path, SshConfigWriter.Write(source.Select(ViewModel.ToImported), now));
                     ViewModel.ShowStatus($"{Plural(source.Count)} SSH {(source.Count == 1 ? "exportada" : "exportadas")} para {Path.GetFileName(path)}. Use com \"Include\" no ~/.ssh/config.", InfoBarSeverity.Success);
                     return;
                 }

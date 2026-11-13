@@ -29,6 +29,7 @@ public partial class MainViewModel : ObservableObject
         [nameof(Connection.Name), nameof(Connection.Group), nameof(Connection.Host), nameof(Connection.Username)];
 
     private readonly ConnectionStore _store = new();
+    private readonly SharedCredentialStore _credentialStore = new();
     private readonly List<Connection> _connections = [];
     private readonly DispatcherQueue _dispatcher = DispatcherQueue.GetForCurrentThread();
     private readonly DispatcherQueueTimer _autoSaveTimer;
@@ -73,8 +74,112 @@ public partial class MainViewModel : ObservableObject
             ShowStatus($"Não foi possível ler {_store.FilePath}: {ex.Message}", InfoBarSeverity.Error);
         }
 
+        try
+        {
+            foreach (var cred in _credentialStore.Load().OrderBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase))
+                Credentials.Add(cred);
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"Não foi possível ler {_credentialStore.FilePath}: {ex.Message}", InfoBarSeverity.Error);
+        }
+
         RefreshGroups();
     }
+
+    // --- Credenciais compartilhadas ---
+
+    public ObservableCollection<SharedCredential> Credentials { get; } = [];
+
+    /// <summary>Credencial compartilhada usada pela conexão (null = própria ou não encontrada).</summary>
+    public SharedCredential? CredentialFor(Connection c) =>
+        c.CredentialId is { } id ? Credentials.FirstOrDefault(x => x.Id == id) : null;
+
+    /// <summary>Usuário efetivo no formato DOMINIO\usuario (da credencial compartilhada ou da conexão).</summary>
+    public string? EffectiveFullUsername(Connection c)
+    {
+        var full = CredentialFor(c)?.FullUsername ?? (string.IsNullOrWhiteSpace(c.Username) ? null : c.FullUsername);
+        return string.IsNullOrWhiteSpace(full) ? null : full;
+    }
+
+    /// <summary>Usuário gravado no .rdp exportado (sem o usuário do Windows, que é de quem abrir o arquivo).</summary>
+    public string? ExportUsername(Connection c) => c.UseWindowsCredentials ? null : EffectiveFullUsername(c);
+
+    private string PasswordKey(Connection c) =>
+        CredentialFor(c) is { } cred ? CredentialStore.KeyForShared(cred.Id) : CredentialStore.KeyFor(c);
+
+    public string? ReadPassword(Connection c) => CredentialStore.ReadPassword(PasswordKey(c));
+
+    private bool HasPassword(Connection c) => CredentialStore.Exists(PasswordKey(c));
+
+    public int CredentialUsageCount(SharedCredential cred) => _connections.Count(c => c.CredentialId == cred.Id);
+
+    /// <summary>Cria ou atualiza uma credencial. Senha null mantém a atual.</summary>
+    public bool SaveCredential(SharedCredential cred, string? password)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(password))
+                CredentialStore.Write(CredentialStore.KeyForShared(cred.Id), cred.FullUsername, password);
+
+            var index = Credentials.IndexOf(cred);
+            if (index >= 0)
+                Credentials[index] = cred; // força a lista a redesenhar o item editado
+            else
+                Credentials.Add(cred);
+
+            SaveCredentials();
+            if (Selected is { } s && s.CredentialId == cred.Id)
+                HasSavedPassword = HasPassword(s);
+            ShowStatus($"Credencial \"{cred.Name}\" salva.", InfoBarSeverity.Success);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"Falha ao salvar a credencial: {ex.Message}", InfoBarSeverity.Error);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Exclui a credencial. As conexões que a usavam voltam a ter usuário próprio (copiado da credencial),
+    /// mas sem senha.
+    /// </summary>
+    public void DeleteCredential(SharedCredential cred)
+    {
+        foreach (var c in _connections.Where(c => c.CredentialId == cred.Id))
+        {
+            c.CredentialId = null;
+            c.Username = cred.Username;
+            c.Domain = cred.Domain;
+        }
+
+        try
+        {
+            CredentialStore.Delete(CredentialStore.KeyForShared(cred.Id));
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"Falha ao remover a senha da credencial: {ex.Message}", InfoBarSeverity.Warning);
+        }
+
+        Credentials.Remove(cred);
+        SaveCredentials();
+        _autoSaveTimer.Stop();
+        SaveToDisk();
+        if (Selected is { } s)
+            HasSavedPassword = HasPassword(s);
+        ShowStatus($"Credencial \"{cred.Name}\" excluída.", InfoBarSeverity.Success);
+    }
+
+    private void SaveCredentials()
+    {
+        _credentialStore.Save(Credentials);
+        CredentialsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Lista de credenciais mudou (o editor atualiza o seletor).</summary>
+    public event EventHandler? CredentialsChanged;
 
     /// <summary>Disparado sempre que as conexões são gravadas em disco (o dashboard se atualiza).</summary>
     public event EventHandler? DataChanged;
@@ -126,7 +231,7 @@ public partial class MainViewModel : ObservableObject
             newValue.PropertyChanged += Selected_PropertyChanged;
 
         Password = string.Empty;
-        HasSavedPassword = newValue is not null && CredentialStore.Exists(CredentialStore.KeyFor(newValue));
+        HasSavedPassword = newValue is not null && HasPassword(newValue);
         IsEditing = false;
 
         // nome/grupo editados: reorganiza a lista depois que a troca de seleção terminar
@@ -136,6 +241,10 @@ public partial class MainViewModel : ObservableObject
 
     private void Selected_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        // trocar a credencial muda de onde vem a senha
+        if (e.PropertyName == nameof(Connection.CredentialId) && sender is Connection changed)
+            HasSavedPassword = HasPassword(changed);
+
         if (e.PropertyName == nameof(Connection.Status))
             return;
 
@@ -191,14 +300,15 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>Conexão no formato neutro de importação/exportação (sem senha).</summary>
-    public static ImportedConnection ToImported(Connection c) => new()
+    public ImportedConnection ToImported(Connection c) => new()
     {
         Protocol = c.Protocol,
         Name = c.Name,
         Host = c.Host.Trim(),
         Port = (int)c.Port,
-        Username = c.Username,
-        Domain = c.Domain,
+        // credencial compartilhada: leva o usuário dela (o Id não faz sentido em outra máquina)
+        Username = CredentialFor(c)?.Username ?? c.Username,
+        Domain = CredentialFor(c)?.Domain ?? c.Domain,
         Group = c.Group,
         Notes = c.Notes,
         IsFavorite = c.IsFavorite,
@@ -386,16 +496,16 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            var password = CredentialStore.ReadPassword(CredentialStore.KeyFor(c));
+            var password = ReadPassword(c);
 
             if (c.Protocol == ConnectionProtocol.Rdp)
             {
-                RdpLauncher.Launch(c, password);
+                RdpLauncher.Launch(c, EffectiveFullUsername(c), password);
                 ShowStatus($"Abrindo {c.Name} no Conexão de Área de Trabalho Remota…", InfoBarSeverity.Success);
             }
             else
             {
-                SshLauncher.Launch(c);
+                SshLauncher.Launch(c, CredentialFor(c)?.Username ?? c.Username);
                 var tunnelWarning = TunnelWarning(c.Tunnels);
                 var severity = tunnelWarning is null ? InfoBarSeverity.Success : InfoBarSeverity.Warning;
                 // o ssh.exe não aceita senha por argumento: deixa ela pronta para colar
@@ -507,7 +617,7 @@ public partial class MainViewModel : ObservableObject
         if (Selected is not { } c)
             return;
 
-        var pwd = !string.IsNullOrEmpty(Password) ? Password : CredentialStore.ReadPassword(CredentialStore.KeyFor(c));
+        var pwd = !string.IsNullOrEmpty(Password) ? Password : ReadPassword(c);
         if (pwd is null)
         {
             ShowStatus("Nenhuma senha salva para esta conexão.", InfoBarSeverity.Warning);

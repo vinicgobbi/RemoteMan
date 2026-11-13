@@ -56,6 +56,9 @@ public partial class Connection : ObservableObject
     [JsonIgnore]
     [ObservableProperty] public partial ReachabilityStatus Status { get; set; }
 
+    /// <summary>Credencial compartilhada usada por esta conexão (null = usuário e senha próprios).</summary>
+    [ObservableProperty] public partial Guid? CredentialId { get; set; }
+
     // --- RDP ---
     /// <summary>Conecta com o usuário logado no Windows em vez de usuário/senha salvos.</summary>
     [ObservableProperty] public partial bool UseWindowsCredentials { get; set; }
@@ -97,6 +100,7 @@ public partial class Connection : ObservableObject
         Username = Username,
         Notes = Notes,
         UseWindowsCredentials = UseWindowsCredentials,
+        CredentialId = CredentialId,
         Domain = Domain,
         FullScreen = FullScreen,
         DesktopWidth = DesktopWidth,

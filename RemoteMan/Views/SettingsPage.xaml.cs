@@ -111,6 +111,48 @@ public sealed partial class SettingsPage : Page
     public bool HasWindowsTerminal { get; } = SshLauncher.FindWindowsTerminal() is not null;
     public string DataFilePath => App.ViewModel.DataFilePath;
 
+    public ViewModels.MainViewModel ViewModel => App.ViewModel;
+
+    // --- Credenciais compartilhadas ---
+
+    private async void NewCredential_Click(object sender, RoutedEventArgs e) => await EditCredentialAsync(null);
+
+    private async void EditCredential_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: SharedCredential cred })
+            await EditCredentialAsync(cred);
+    }
+
+    private async Task EditCredentialAsync(SharedCredential? cred)
+    {
+        var dialog = new CredentialDialog(cred) { XamlRoot = XamlRoot };
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary && dialog.Result is { } result)
+            App.ViewModel.SaveCredential(result, dialog.Password);
+    }
+
+    private async void DeleteCredential_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: SharedCredential cred })
+            return;
+
+        var usage = App.ViewModel.CredentialUsageCount(cred);
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = "Excluir credencial",
+            Content = usage == 0
+                ? $"Excluir \"{cred.Name}\"? A senha salva também será removida."
+                : $"\"{cred.Name}\" é usada por {(usage == 1 ? "1 conexão" : $"{usage} conexões")}. Ao excluir, "
+                  + "elas passam a usar o mesmo usuário como próprio, mas ficam sem senha salva.",
+            PrimaryButtonText = "Excluir",
+            CloseButtonText = "Cancelar",
+            DefaultButton = ContentDialogButton.Close,
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            App.ViewModel.DeleteCredential(cred);
+    }
+
     public string Version { get; } =
         Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "—";
 }

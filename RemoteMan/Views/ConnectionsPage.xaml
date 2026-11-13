@@ -321,7 +321,7 @@
                                     <TextBlock Text="Autenticação" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,4" />
                                     <c:FieldRow
                                         Label="Usuário"
-                                        Value="{x:Bind h:Ui.UserText(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials, ViewModel.Selected.Username, ViewModel.Selected.Domain), Mode=OneWay}" />
+                                        Value="{x:Bind h:Ui.UserTextWithCredential(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials, ViewModel.Selected.Username, ViewModel.Selected.Domain, ViewModel.Selected.CredentialId), Mode=OneWay}" />
                                     <c:FieldRow
                                         Label="Senha"
                                         Value="{x:Bind h:Ui.PasswordText(ViewModel.HasSavedPassword), Mode=OneWay}"
@@ -431,7 +431,20 @@
                                         Message="{x:Bind h:Ui.WindowsUserInfo()}"
                                         Visibility="{x:Bind h:Ui.WindowsCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials), Mode=OneWay}" />
 
-                                    <Grid ColumnSpacing="12" Visibility="{x:Bind h:Ui.ManualCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials), Mode=OneWay}">
+                                    <ComboBox
+                                        x:Name="CredentialBox"
+                                        Header="Credencial"
+                                        HorizontalAlignment="Stretch"
+                                        Visibility="{x:Bind h:Ui.ManualCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials), Mode=OneWay}"
+                                        SelectionChanged="Credential_SelectionChanged" />
+                                    <TextBlock
+                                        Style="{StaticResource SecondaryCaptionStyle}"
+                                        TextWrapping="Wrap"
+                                        Margin="0,-4,0,0"
+                                        Text="{x:Bind h:Ui.SharedCredentialText(ViewModel.Selected.CredentialId), Mode=OneWay}"
+                                        Visibility="{x:Bind h:Ui.SharedCredentialInfo(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials, ViewModel.Selected.CredentialId), Mode=OneWay}" />
+
+                                    <Grid ColumnSpacing="12" Visibility="{x:Bind h:Ui.OwnCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials, ViewModel.Selected.CredentialId), Mode=OneWay}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="*" />
@@ -445,7 +458,7 @@
                                             Text="{x:Bind ViewModel.Selected.Domain, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                     </Grid>
 
-                                    <Grid ColumnSpacing="8" Visibility="{x:Bind h:Ui.ManualCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials), Mode=OneWay}">
+                                    <Grid ColumnSpacing="8" Visibility="{x:Bind h:Ui.OwnCredentials(ViewModel.Selected.Protocol, ViewModel.Selected.UseWindowsCredentials, ViewModel.Selected.CredentialId), Mode=OneWay}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />

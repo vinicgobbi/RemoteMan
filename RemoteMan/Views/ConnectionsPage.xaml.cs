@@ -23,15 +23,54 @@ public sealed partial class ConnectionsPage : Page
         ViewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(MainViewModel.Selected))
+            {
                 SyncListSelection();
+                SyncCredentialBox();
+            }
         };
+        ViewModel.CredentialsChanged += (_, _) => RebuildCredentialOptions();
+        RebuildCredentialOptions();
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
         SyncListSelection();
+        RebuildCredentialOptions(); // pode ter mudado em Configurações
         ViewModel.CheckStatusIfStale();
+    }
+
+    // --- Seletor de credencial (itens: "própria" + compartilhadas; Ids em lista paralela) ---
+
+    private readonly List<Guid?> _credentialIds = [];
+    private bool _syncingCredential;
+
+    private void RebuildCredentialOptions()
+    {
+        _syncingCredential = true;
+        _credentialIds.Clear();
+        _credentialIds.Add(null);
+        _credentialIds.AddRange(ViewModel.Credentials.Select(c => (Guid?)c.Id));
+        CredentialBox.ItemsSource = new[] { "Usuário e senha desta conexão" }
+            .Concat(ViewModel.Credentials.Select(c => c.DisplayText))
+            .ToList();
+        _syncingCredential = false;
+        SyncCredentialBox();
+    }
+
+    private void SyncCredentialBox()
+    {
+        _syncingCredential = true;
+        var index = _credentialIds.IndexOf(ViewModel.Selected?.CredentialId);
+        CredentialBox.SelectedIndex = index < 0 ? 0 : index;
+        _syncingCredential = false;
+    }
+
+    private void Credential_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_syncingCredential || ViewModel.Selected is not { } c || CredentialBox.SelectedIndex < 0)
+            return;
+        c.CredentialId = _credentialIds[CredentialBox.SelectedIndex];
     }
 
     private void SyncListSelection()

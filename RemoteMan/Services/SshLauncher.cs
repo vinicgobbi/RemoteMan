@@ -6,10 +6,11 @@ namespace RemoteMan.Services;
 /// <summary>Abre o OpenSSH numa aba do Windows Terminal (ou num console, se o WT não existir).</summary>
 public static class SshLauncher
 {
-    public static void Launch(Connection c)
+    /// <param name="username">Usuário efetivo (da conexão ou da credencial compartilhada).</param>
+    public static void Launch(Connection c, string? username)
     {
         var ssh = FindSsh();
-        var args = BuildSshArgs(c);
+        var args = BuildSshArgs(c, username);
         var wt = FindWindowsTerminal();
 
         ProcessStartInfo psi;
@@ -32,8 +33,8 @@ public static class SshLauncher
         Process.Start(psi);
     }
 
-    private static List<string> BuildSshArgs(Connection c) =>
-        SshArguments.Build(c.Host, (int)c.Port, c.Username, c.KeyFile, c.JumpHost, SshTunnels.Parse(c.Tunnels).Tunnels);
+    private static List<string> BuildSshArgs(Connection c, string? username) =>
+        SshArguments.Build(c.Host, (int)c.Port, username, c.KeyFile, c.JumpHost, SshTunnels.Parse(c.Tunnels).Tunnels);
 
     private static string FindSsh() => FindSshPath() ?? "ssh.exe";
 

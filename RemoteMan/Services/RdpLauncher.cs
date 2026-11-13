@@ -24,11 +24,8 @@ public static class RdpLauncher
         GatewayUseSameCredentials = c.GatewayUseSameCredentials,
     };
 
-    /// <summary>Usuário gravado no .rdp exportado (sem o usuário do Windows, que é de quem abrir o arquivo).</summary>
-    public static string? ExportUsername(Connection c) =>
-        c.UseWindowsCredentials || string.IsNullOrWhiteSpace(c.Username) ? null : c.FullUsername;
-
-    public static void Launch(Connection c, string? password)
+    /// <param name="fullUsername">Usuário efetivo (DOMINIO\usuario), já resolvido da conexão ou da credencial compartilhada.</param>
+    public static void Launch(Connection c, string? fullUsername, string? password)
     {
         var host = c.Host.Trim();
 
@@ -43,7 +40,7 @@ public static class RdpLauncher
         }
         else
         {
-            username = string.IsNullOrWhiteSpace(c.Username) ? null : c.FullUsername;
+            username = string.IsNullOrWhiteSpace(fullUsername) ? null : fullUsername;
 
             // Grava a credencial onde o mstsc procura (TERMSRV/host) para conectar sem pedir senha.
             if (password is not null && username is not null)

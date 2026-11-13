@@ -18,6 +18,9 @@ public static class CredentialStore
     /// <summary>Chave onde o app guarda a senha de uma conexão.</summary>
     public static string KeyFor(Connection c) => $"RemoteMan/{c.Id}";
 
+    /// <summary>Chave da senha de uma credencial compartilhada.</summary>
+    public static string KeyForShared(Guid credentialId) => $"RemoteMan/cred/{credentialId}";
+
     /// <summary>Chave que o mstsc.exe consulta para logar automaticamente.</summary>
     public static string RdpKeyFor(string host) => $"TERMSRV/{host}";
 
