@@ -31,4 +31,7 @@ public sealed partial class DashboardPage : Page
 
     private async void NewConnection_Click(object sender, RoutedEventArgs e) =>
         await App.MainWindow.NewConnectionAsync();
+
+    private async void QuickConnect_Click(object sender, RoutedEventArgs e) =>
+        await App.MainWindow.QuickConnectAsync();
 }

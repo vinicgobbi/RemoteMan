@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="RemoteMan.Views.QuickConnectDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:m="using:RemoteMan.Models"
+    xmlns:c="using:RemoteMan.Controls"
+    Style="{StaticResource DefaultContentDialogStyle}"
+    CloseButtonText="Fechar"
+    Opened="Dialog_Opened">
+
+    <!-- Busca rápida: digitar, escolher com as setas e Enter para conectar -->
+    <StackPanel Width="480" Spacing="12">
+        <TextBox
+            x:Name="QueryBox"
+            PlaceholderText="Conectar a… (nome, host, grupo ou usuário)"
+            IsSpellCheckEnabled="False"
+            TextChanged="Query_TextChanged"
+            PreviewKeyDown="Query_PreviewKeyDown" />
+
+        <ListView
+            x:Name="ResultsList"
+            MaxHeight="400"
+            Margin="-12,0"
+            SelectionMode="Single"
+            IsItemClickEnabled="True"
+            ItemClick="Results_ItemClick">
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="m:Connection">
+                    <c:ConnectionItem Connection="{x:Bind}" ShowFavorite="{x:Bind IsFavorite, Mode=OneWay}" />
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <TextBlock
+            x:Name="EmptyText"
+            Style="{StaticResource SecondaryTextStyle}"
+            HorizontalAlignment="Center"
+            Visibility="Collapsed" />
+
+        <TextBlock
+            Style="{StaticResource SecondaryCaptionStyle}"
+            Text="↑ ↓ escolher · Enter conectar · Esc fechar" />
+    </StackPanel>
+</ContentDialog>

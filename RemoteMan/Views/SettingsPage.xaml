@@ -19,6 +19,48 @@
 
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel Spacing="4">
+                        <TextBlock Text="Aparência" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,4" />
+                        <c:FieldRow Label="Efeito de fundo" Description="Material nativo do Windows 11 aplicado à janela.">
+                            <c:FieldRow.Action>
+                                <ComboBox x:Name="BackdropBox" MinWidth="220" SelectionChanged="Backdrop_SelectionChanged">
+                                    <ComboBoxItem Content="Mica" ToolTipService.ToolTip="Tingido sutil com as cores do papel de parede" />
+                                    <ComboBoxItem Content="Mica Alt" ToolTipService.ToolTip="Variante do Mica com mais contraste" />
+                                    <ComboBoxItem Content="Acrílico (desfoque)" ToolTipService.ToolTip="Translúcido: mostra, desfocado, o que está atrás da janela" />
+                                </ComboBox>
+                            </c:FieldRow.Action>
+                        </c:FieldRow>
+                        <TextBlock
+                            x:Name="BackdropNote"
+                            Style="{StaticResource SecondaryCaptionStyle}"
+                            TextWrapping="Wrap"
+                            Visibility="Collapsed" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Atualizações" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,4" />
+                        <c:FieldRow Label="Verificar ao abrir" Description="Consulta o GitHub no máximo uma vez por dia.">
+                            <c:FieldRow.Action>
+                                <ToggleSwitch x:Name="CheckUpdatesSwitch" Style="{StaticResource RowToggleSwitchStyle}" Toggled="CheckUpdates_Toggled" />
+                            </c:FieldRow.Action>
+                        </c:FieldRow>
+                        <c:FieldRow Label="Versão instalada" Value="{x:Bind Version}">
+                            <c:FieldRow.Action>
+                                <Button x:Name="CheckNowButton" Click="CheckNow_Click">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE895;" Style="{StaticResource ButtonIconStyle}" />
+                                        <TextBlock Text="Verificar agora" />
+                                    </StackPanel>
+                                </Button>
+                            </c:FieldRow.Action>
+                        </c:FieldRow>
+                        <TextBlock x:Name="CheckResultText" Style="{StaticResource SecondaryCaptionStyle}" TextWrapping="Wrap" Visibility="Collapsed" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="4">
                         <TextBlock Text="Ambiente" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,4" />
                         <c:FieldRow Label="Usuário do Windows" Value="{x:Bind WindowsUser}" />
                         <c:FieldRow Label="OpenSSH" Value="{x:Bind h:Ui.OrNotFound(SshPath)}" />

@@ -26,6 +26,7 @@ public partial class Connection : ObservableObject
         Username = string.Empty;
         Domain = string.Empty;
         KeyFile = string.Empty;
+        JumpHost = string.Empty;
         Notes = string.Empty;
         Port = 3389;
         FullScreen = true;
@@ -67,6 +68,9 @@ public partial class Connection : ObservableObject
     // --- SSH ---
     [ObservableProperty] public partial string KeyFile { get; set; }
 
+    /// <summary>Servidor(es) intermediário(s) para o ssh -J (ex.: "bastion" ou "user@gw:2222,outro").</summary>
+    [ObservableProperty] public partial string JumpHost { get; set; }
+
     /// <summary>Cópia com novo Id (não usa MemberwiseClone para não copiar os handlers de PropertyChanged).</summary>
     public Connection Clone() => new()
     {
@@ -87,6 +91,7 @@ public partial class Connection : ObservableObject
         RedirectDrives = RedirectDrives,
         AdminSession = AdminSession,
         KeyFile = KeyFile,
+        JumpHost = JumpHost,
     };
 
     /// <summary>Usuário no formato DOMINIO\usuario quando houver domínio.</summary>

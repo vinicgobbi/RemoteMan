@@ -179,6 +179,47 @@ public partial class MainViewModel : ObservableObject
             ShowStatus($"\"{c.Name}\" criada.", InfoBarSeverity.Success);
     }
 
+    /// <summary>Adiciona conexões vindas da importação e seleciona a primeira.</summary>
+    public void ImportConnections(IReadOnlyList<ImportedConnection> items, string group)
+    {
+        if (items.Count == 0)
+            return;
+
+        var added = items.Select(i =>
+        {
+            var c = new Connection
+            {
+                Protocol = i.Protocol,
+                Name = i.Name,
+                Group = group,
+                Host = i.Host,
+                Port = i.Port,
+                Username = i.Username,
+                Domain = i.Domain,
+                KeyFile = i.KeyFile,
+                JumpHost = i.JumpHost,
+            };
+            // opções RDP ausentes no arquivo mantêm o padrão do app
+            if (i.FullScreen is { } fullScreen) c.FullScreen = fullScreen;
+            if (i.DesktopWidth is { } width) c.DesktopWidth = width;
+            if (i.DesktopHeight is { } height) c.DesktopHeight = height;
+            if (i.MultiMonitor is { } multiMonitor) c.MultiMonitor = multiMonitor;
+            if (i.RedirectClipboard is { } clipboard) c.RedirectClipboard = clipboard;
+            if (i.RedirectDrives is { } drives) c.RedirectDrives = drives;
+            if (i.AdminSession is { } admin) c.AdminSession = admin;
+            return c;
+        }).ToList();
+
+        _connections.AddRange(added);
+        SearchText = string.Empty;
+        RefreshGroups();
+        Selected = added[0];
+        IsEditing = false;
+        if (SaveToDisk())
+            ShowStatus(added.Count == 1 ? $"\"{added[0].Name}\" importada." : $"{added.Count} conexões importadas.", InfoBarSeverity.Success);
+        _ = CheckStatusAsync(); // já mostra quais servidores importados respondem
+    }
+
     [RelayCommand]
     private void Edit()
     {
@@ -454,6 +495,90 @@ public partial class MainViewModel : ObservableObject
                 : offline == 0
                     ? online == 1 ? "1 servidor online" : $"Todos os {online} servidores online"
                     : $"{online} online · {offline} offline";
+    }
+
+    // --- Atualizações ---
+
+    private static readonly TimeSpan UpdateCheckInterval = TimeSpan.FromDays(1);
+
+    /// <summary>Release mais novo que a versão em uso (null = nenhum encontrado).</summary>
+    [ObservableProperty] public partial ReleaseInfo? AvailableUpdate { get; set; }
+    [ObservableProperty] public partial bool IsUpdateOpen { get; set; }
+
+    public string UpdateMessage => AvailableUpdate is { } u
+        ? $"A versão {u.Version} está disponível (você usa a {UpdateChecker.CurrentVersion})."
+        : string.Empty;
+
+    partial void OnAvailableUpdateChanged(ReleaseInfo? value) => OnPropertyChanged(nameof(UpdateMessage));
+
+    /// <summary>Verificação automática ao abrir: respeita a preferência e o intervalo, e falha em silêncio.</summary>
+    public async Task CheckForUpdatesIfDueAsync()
+    {
+        var settings = App.Settings;
+        if (!settings.CheckForUpdates)
+            return;
+        if (settings.LastUpdateCheck is { } last && DateTime.Now - last < UpdateCheckInterval)
+            return;
+
+        await CheckForUpdatesAsync();
+    }
+
+    /// <summary>Consulta o GitHub agora. Retorna uma frase com o resultado (usada em Configurações).</summary>
+    public async Task<string> CheckForUpdatesAsync()
+    {
+        try
+        {
+            var latest = await UpdateChecker.GetLatestAsync();
+
+            App.Settings.LastUpdateCheck = DateTime.Now;
+            try
+            {
+                App.SettingsStore.Save(App.Settings);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // só perde o registro da última verificação
+            }
+
+            if (latest is not null && UpdateRelease.IsNewer(UpdateChecker.CurrentVersion, latest.Version))
+            {
+                AvailableUpdate = latest;
+                IsUpdateOpen = true;
+                return $"Versão {latest.Version} disponível.";
+            }
+
+            AvailableUpdate = null;
+            IsUpdateOpen = false;
+            return $"Você já está na versão mais recente ({UpdateChecker.CurrentVersion}).";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or KeyNotFoundException or InvalidOperationException)
+        {
+            return "Não foi possível verificar agora. Confira a conexão com a internet.";
+        }
+    }
+
+    /// <summary>Baixa o instalador (ou o zip portátil) da versão nova pelo navegador.</summary>
+    [RelayCommand]
+    private async Task DownloadUpdateAsync()
+    {
+        if (AvailableUpdate is not { } u)
+            return;
+
+        var asset = UpdateRelease.PickAsset(u.Assets, UpdateChecker.Architecture, UpdateChecker.IsInstalled);
+        await Windows.System.Launcher.LaunchUriAsync(new Uri(asset?.DownloadUrl ?? u.PageUrl));
+        if (asset is not null)
+            ShowStatus(
+                UpdateChecker.IsInstalled
+                    ? "Download iniciado. Feche o RemoteMan e abra o instalador para atualizar."
+                    : "Download iniciado. Extraia o zip por cima da pasta atual para atualizar.",
+                InfoBarSeverity.Informational);
+    }
+
+    [RelayCommand]
+    private async Task OpenReleaseNotesAsync()
+    {
+        if (AvailableUpdate is { } u)
+            await Windows.System.Launcher.LaunchUriAsync(new Uri(u.PageUrl));
     }
 
     // --- Persistência ---

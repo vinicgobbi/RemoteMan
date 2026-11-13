@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="RemoteMan.Views.ImportDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:RemoteMan.ViewModels"
+    xmlns:h="using:RemoteMan.Helpers"
+    Style="{StaticResource DefaultContentDialogStyle}"
+    Title="Importar conexões"
+    PrimaryButtonText="Importar"
+    CloseButtonText="Cancelar"
+    DefaultButton="Primary"
+    PrimaryButtonClick="Primary_Click"
+    Opened="Dialog_Opened">
+
+    <StackPanel Width="480" Spacing="12">
+        <TextBlock x:Name="SummaryText" Style="{StaticResource SecondaryTextStyle}" TextWrapping="Wrap" />
+
+        <InfoBar x:Name="ErrorsInfo" Severity="Warning" IsClosable="False" IsOpen="False" />
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="SelectionText" Style="{StaticResource SecondaryCaptionStyle}" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <HyperlinkButton Content="Marcar todas" Click="SelectAll_Click" />
+                <HyperlinkButton Content="Desmarcar todas" Click="SelectNone_Click" />
+            </StackPanel>
+        </Grid>
+
+        <ListView
+            x:Name="ItemsList"
+            MaxHeight="320"
+            SelectionMode="Multiple"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            SelectionChanged="Items_SelectionChanged">
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="vm:ImportItem">
+                    <Grid Padding="0,8" ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="{x:Bind Glyph}" FontSize="16" VerticalAlignment="Top" Margin="0,2,0,0" />
+                        <StackPanel Grid.Column="1" Spacing="2">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{x:Bind Name}" Style="{ThemeResource BodyStrongTextBlockStyle}" TextTrimming="CharacterEllipsis" />
+                                <Border
+                                    Padding="6,0"
+                                    CornerRadius="4"
+                                    VerticalAlignment="Center"
+                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                    Visibility="{x:Bind h:Ui.VisibleIf(IsDuplicate)}">
+                                    <TextBlock Text="Já cadastrada" Style="{StaticResource SecondaryCaptionStyle}" />
+                                </Border>
+                            </StackPanel>
+                            <TextBlock Text="{x:Bind Details}" Style="{StaticResource SecondaryCaptionStyle}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock
+                                Text="{x:Bind Warning}"
+                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                TextWrapping="Wrap"
+                                Visibility="{x:Bind h:Ui.VisibleIfText(Warning)}" />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <ComboBox
+            x:Name="GroupBox"
+            Header="Grupo das conexões importadas"
+            PlaceholderText="Sem grupo"
+            IsEditable="True"
+            HorizontalAlignment="Stretch" />
+
+        <TextBlock
+            Style="{StaticResource SecondaryCaptionStyle}"
+            TextWrapping="Wrap"
+            Text="Senhas não são importadas. Depois de importar, informe a senha em “Editar” ou na primeira conexão." />
+    </StackPanel>
+</ContentDialog>
