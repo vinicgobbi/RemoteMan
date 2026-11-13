@@ -14,7 +14,7 @@
         <!-- Barra de título customizada -->
         <Grid x:Name="AppTitleBar" Padding="16,0,0,0">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <FontIcon Glyph="&#xE703;" FontSize="16" />
+                <Image Source="ms-appx:///Assets/AppIcon.png" Width="16" Height="16" />
                 <TextBlock Text="RemoteMan" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
             </StackPanel>
         </Grid>
