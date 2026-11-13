@@ -17,4 +17,9 @@ public enum BackdropKind
 public sealed class AppSettings
 {
     public BackdropKind Backdrop { get; set; } = BackdropKind.Mica;
+
+    /// <summary>Verifica no GitHub, ao abrir o app (no máximo uma vez por dia), se há versão nova.</summary>
+    public bool CheckForUpdates { get; set; } = true;
+
+    public DateTime? LastUpdateCheck { get; set; }
 }

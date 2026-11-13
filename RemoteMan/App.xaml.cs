@@ -28,5 +28,8 @@ public partial class App : Application
         ViewModel = new MainViewModel();
         MainWindow = new MainWindow();
         MainWindow.Activate();
+
+        // em segundo plano: não atrasa a abertura e falha em silêncio
+        _ = ViewModel.CheckForUpdatesIfDueAsync();
     }
 }

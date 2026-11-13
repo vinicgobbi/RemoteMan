@@ -17,6 +17,7 @@ public sealed partial class SettingsPage : Page
 
         _loading = true;
         BackdropBox.SelectedIndex = (int)App.Settings.Backdrop;
+        CheckUpdatesSwitch.IsOn = App.Settings.CheckForUpdates;
         _loading = false;
         ShowBackdropNote(App.Settings.Backdrop, App.MainWindow.AppliedBackdrop);
     }
@@ -30,6 +31,34 @@ public sealed partial class SettingsPage : Page
         ShowBackdropNote(requested, App.MainWindow.ApplyBackdrop(requested));
 
         App.Settings.Backdrop = requested;
+        SaveSettings();
+    }
+
+    private void CheckUpdates_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_loading)
+            return;
+        App.Settings.CheckForUpdates = CheckUpdatesSwitch.IsOn;
+        SaveSettings();
+    }
+
+    private async void CheckNow_Click(object sender, RoutedEventArgs e)
+    {
+        CheckNowButton.IsEnabled = false;
+        CheckResultText.Text = "Verificando…";
+        CheckResultText.Visibility = Visibility.Visible;
+        try
+        {
+            CheckResultText.Text = await App.ViewModel.CheckForUpdatesAsync();
+        }
+        finally
+        {
+            CheckNowButton.IsEnabled = true;
+        }
+    }
+
+    private static void SaveSettings()
+    {
         try
         {
             App.SettingsStore.Save(App.Settings);

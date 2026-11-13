@@ -57,13 +57,25 @@
 
                 <Frame x:Name="ContentFrame" />
 
-                <!-- Mensagens de status (comuns a todas as páginas) -->
-                <InfoBar
-                    Grid.Row="1"
-                    Margin="32,0,32,16"
-                    IsOpen="{x:Bind ViewModel.IsStatusOpen, Mode=TwoWay}"
-                    Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
-                    Severity="{x:Bind ViewModel.StatusSeverity, Mode=OneWay}" />
+                <StackPanel Grid.Row="1" Margin="32,0,32,16" Spacing="8">
+                    <!-- Nova versão disponível (fica até o usuário fechar) -->
+                    <InfoBar
+                        Title="Nova versão do RemoteMan"
+                        Severity="Informational"
+                        IsOpen="{x:Bind ViewModel.IsUpdateOpen, Mode=TwoWay}"
+                        Message="{x:Bind ViewModel.UpdateMessage, Mode=OneWay}">
+                        <InfoBar.ActionButton>
+                            <Button Content="Baixar" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.DownloadUpdateCommand}" />
+                        </InfoBar.ActionButton>
+                        <HyperlinkButton Content="Ver novidades" Margin="0,0,0,8" Command="{x:Bind ViewModel.OpenReleaseNotesCommand}" />
+                    </InfoBar>
+
+                    <!-- Mensagens de status (comuns a todas as páginas) -->
+                    <InfoBar
+                        IsOpen="{x:Bind ViewModel.IsStatusOpen, Mode=TwoWay}"
+                        Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                        Severity="{x:Bind ViewModel.StatusSeverity, Mode=OneWay}" />
+                </StackPanel>
             </Grid>
         </NavigationView>
     </Grid>
