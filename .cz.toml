@@ -1,0 +1,15 @@
+# Commitizen: padrão de commits (Conventional Commits), versão e CHANGELOG.
+# Versão em 0.x: "feat" sobe a minor, "fix"/"perf"/"refactor" sobem a patch e "!" não pula para 1.0.
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+version_scheme = "semver2"
+tag_format = "v$version"
+annotated_tag = true
+major_version_zero = true
+update_changelog_on_bump = true
+changelog_incremental = true
+bump_message = "chore(release): versão $current_version → $new_version"
+version_files = [
+    "RemoteMan/RemoteMan.csproj:<Version>",
+]
