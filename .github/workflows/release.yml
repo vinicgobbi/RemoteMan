@@ -1,4 +1,4 @@
-# Publica o app (zip self-contained por plataforma) e cria o GitHub Release com as notas do CHANGELOG.
+# Publica o app (instalador .exe e zip portátil por plataforma) e cria o GitHub Release com as notas do CHANGELOG.
 # Chamado pelo workflow de bump ou disparado por push manual de uma tag v* (ex.: v0.1.0).
 name: Release
 
@@ -46,12 +46,15 @@ jobs:
         include:
           - rid: win-x64
             platform: x64
+            arch: x64
           - rid: win-arm64
             platform: ARM64
+            arch: arm64
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
       RID: ${{ matrix.rid }}
       PLATFORM: ${{ matrix.platform }}
+      ARCH: ${{ matrix.arch }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -66,16 +69,29 @@ jobs:
         run: >
           dotnet publish RemoteMan/RemoteMan.csproj -c Release
           -r $env:RID -p:Platform=$env:PLATFORM --self-contained
-          -p:Version=$env:VERSION -o publish
+          -p:Version=$env:VERSION -p:DebugType=none -o "publish/$env:RID"
 
-      - name: Compactar
+      # WinUI 3 não funciona com PublishSingleFile: o "exe único" é o instalador.
+      - name: Instalar Inno Setup
         shell: pwsh
-        run: Compress-Archive -Path publish/* -DestinationPath "RemoteMan-$env:VERSION-$env:RID.zip"
+        run: choco install innosetup --version 6.7.1 --yes --no-progress
+
+      - name: Gerar instalador
+        shell: pwsh
+        run: >
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          "/DAppVersion=$env:VERSION" "/DArch=$env:ARCH"
+          "/DPublishDir=..\publish\$env:RID" "/DOutputDir=..\dist"
+          installer\RemoteMan.iss
+
+      - name: Gerar zip portátil
+        shell: pwsh
+        run: Compress-Archive -Path "publish/$env:RID/*" -DestinationPath "dist/RemoteMan-$env:VERSION-$env:ARCH-portable.zip"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: RemoteMan-${{ matrix.rid }}
-          path: RemoteMan-*.zip
+          path: dist/*
           if-no-files-found: error
 
   release:
@@ -114,7 +130,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release create "v${VERSION}" dist/*.zip \
+          gh release create "v${VERSION}" dist/* \
             --title "RemoteMan ${VERSION}" \
             --notes-file notes.md \
             --verify-tag
