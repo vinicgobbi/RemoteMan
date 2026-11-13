@@ -48,6 +48,13 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           before="$(cz version --project)"
+
+          # sem a tag da versão atual, o cz consideraria o histórico inteiro e calcularia a versão errada
+          if ! git rev-parse -q --verify "refs/tags/v${before}" > /dev/null; then
+            echo "::error::A tag v${before} (versão atual do .cz.toml) não existe no repositório. Envie-a com: git push origin v${before}"
+            exit 1
+          fi
+
           # 3 = nenhum commit novo; 21 = nenhum commit que gere versão (docs, chore…): não são erros
           cz --no-raise 3,21 bump --yes
           after="$(cz version --project)"
