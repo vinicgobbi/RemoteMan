@@ -1,3 +1,4 @@
+using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -23,7 +24,7 @@ public sealed partial class MainWindow : Window
         SetTitleBar(AppTitleBar);
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico")); // barra de tarefas e Alt+Tab
-        SystemBackdrop = new MicaBackdrop();
+        ApplyBackdrop(App.Settings.Backdrop);
         AppWindow.Resize(new SizeInt32(1280, 820));
 
         Closed += (_, _) => ViewModel.SaveAll();
@@ -31,6 +32,44 @@ public sealed partial class MainWindow : Window
         // tela inicial: dashboard
         NavView.SelectedItem = HomeNavItem;
     }
+
+    /// <summary>
+    /// Aplica o material de fundo. Se o pedido não for suportado (ex.: Mica no Windows 10), usa o próximo
+    /// disponível. Retorna o que foi aplicado (null = nenhum, fundo sólido).
+    /// </summary>
+    public BackdropKind? ApplyBackdrop(BackdropKind requested)
+    {
+        var mica = MicaController.IsSupported();
+        var acrylic = DesktopAcrylicController.IsSupported();
+
+        BackdropKind? applied = requested switch
+        {
+            BackdropKind.Acrylic when acrylic => BackdropKind.Acrylic,
+            BackdropKind.Acrylic when mica => BackdropKind.Mica,
+            _ when mica => requested,
+            _ when acrylic => BackdropKind.Acrylic,
+            _ => null,
+        };
+
+        SystemBackdrop = applied switch
+        {
+            BackdropKind.Mica => new MicaBackdrop { Kind = MicaKind.Base },
+            BackdropKind.MicaAlt => new MicaBackdrop { Kind = MicaKind.BaseAlt },
+            BackdropKind.Acrylic => new DesktopAcrylicBackdrop(),
+            _ => null,
+        };
+
+        // sem material nenhum, a janela precisa de um fundo sólido
+        RootGrid.Background = applied is null
+            ? (Brush)Application.Current.Resources["SolidBackgroundFillColorBaseBrush"]
+            : null;
+
+        AppliedBackdrop = applied;
+        return applied;
+    }
+
+    /// <summary>Material de fundo em uso (null = nenhum).</summary>
+    public BackdropKind? AppliedBackdrop { get; private set; }
 
     /// <summary>Vai para o dashboard.</summary>
     public void ShowDashboard() => NavView.SelectedItem = HomeNavItem;
