@@ -17,16 +17,20 @@ Windows, nunca em arquivo.
   - arquivos **`.rdp`** (vários de uma vez): host, porta, usuário/domínio, resolução, monitores, área de
     transferência, unidades e sessão admin;
   - **`~/.ssh/config`** ou outro arquivo no mesmo formato: `Host`, `HostName`, `User`, `Port` e
-    `IdentityFile`, respeitando os padrões de `Host *`;
+    `IdentityFile` e `ProxyJump`, respeitando os padrões de `Host *`;
   - **sessões SSH do PuTTY** (chaves `.ppk` não são importadas: converta no PuTTYgen).
 
   Senhas nunca são importadas.
+- **Conexão rápida** (**Ctrl+K** em qualquer tela): digite parte do nome, host, grupo ou usuário, escolha
+  com as setas e conecte com Enter. Favoritos e conexões recentes aparecem primeiro.
 - **Lista de conexões** agrupada, com busca por nome, host, grupo ou usuário.
 - **Detalhes da conexão** em modo leitura, com botões **Conectar** e **Editar**. No modo edição, as
   alterações são salvas automaticamente (Ctrl+S grava na hora).
 - **Configurações**: efeito de fundo da janela (**Mica**, **Mica Alt** ou **Acrílico** com desfoque, com
-  fallback automático onde o Windows não suporta), usuário do Windows, OpenSSH, Windows Terminal e
-  caminho do arquivo de dados.
+  fallback automático onde o Windows não suporta), verificação de atualizações, usuário do Windows,
+  OpenSSH, Windows Terminal e caminho do arquivo de dados.
+- **Aviso de nova versão**: ao abrir (no máximo uma vez por dia), o app consulta o último release no
+  GitHub e, se houver versão nova, oferece baixar o instalador (ou o zip portátil, se for o caso).
 - Em todas as listas, clicar numa conexão abre os detalhes e o botão ▶ conecta. Na tela Conexões, o
   duplo clique também conecta.
 - **RDP**
@@ -36,7 +40,7 @@ Windows, nunca em arquivo.
   - Tela cheia ou resolução fixa, vários monitores, área de transferência, unidades locais e sessão `/admin`.
 - **SSH**
   - Abre uma nova aba no Windows Terminal ou, se ele não estiver instalado, uma janela do `ssh.exe`.
-  - Suporta porta personalizada e chave privada (`-i`).
+  - Suporta porta personalizada, chave privada (`-i`) e jump host / ProxyJump (`-J`).
 - **Favoritos**, contador de uso, duplicar e excluir conexões, notas livres por conexão.
 
 ## Requisitos
@@ -129,7 +133,10 @@ As senhas são protegidas pelo DPAPI do usuário do Windows: só a sua conta, ne
 - **Status online/offline:** o dashboard testa a porta TCP de cada servidor (até 16 ao mesmo tempo, limite
   de 2 s cada). O teste roda ao abrir o Início ou a tela Conexões se a última verificação tiver mais de
   1 minuto, ou pelo botão **Verificar status** (⟳ na tela Conexões). Isso gera tráfego de rede para os
-  servidores cadastrados.
+  servidores cadastrados. Em conexões com jump host, o teste é feito direto no servidor de destino, que
+  costuma não responder de fora: o status "offline" pode não refletir a realidade.
+- **Verificação de atualizações:** consulta `api.github.com` enviando apenas o nome e a versão do app
+  (User-Agent). Pode ser desligada em Configurações.
 
 ## Estrutura do projeto
 
@@ -144,6 +151,7 @@ RemoteMan/
 │   ├── ConnectionsPage      # lista, detalhes e editor de conexões
 │   ├── NewConnectionDialog  # diálogo de criação com os campos essenciais
 │   ├── ImportDialog         # revisão das conexões encontradas antes de importar
+│   ├── QuickConnectDialog   # conexão rápida (Ctrl+K)
 │   └── SettingsPage         # ambiente e informações do app
 ├── Controls/
 │   ├── ConnectionItem       # linha padrão de conexão usada em todas as listas
@@ -166,6 +174,10 @@ RemoteMan/
 │   ├── CredentialStore      # Gerenciador de Credenciais (advapi32)
 │   ├── RdpLauncher          # gera o .rdp e abre o mstsc
 │   ├── SshLauncher          # abre o ssh no Windows Terminal ou console
+│   ├── SshArguments         # monta os argumentos do ssh (-p, -i, -J)
+│   ├── QuickSearch          # busca e ordenação da conexão rápida
+│   ├── UpdateChecker        # consulta o último release no GitHub
+│   ├── UpdateRelease        # compara versões e escolhe o arquivo de atualização
 │   └── ReachabilityChecker  # teste de porta TCP
 └── Helpers/
     └── Ui                   # funções usadas nos x:Bind da interface
