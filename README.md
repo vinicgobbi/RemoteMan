@@ -9,6 +9,9 @@ Windows, nunca em arquivo.
 ## Funcionalidades
 
 - **Início** com resumo do status dos servidores (online/offline), favoritos e conexões recentes.
+- **Nova conexão** (botão ou Ctrl+N) num diálogo curto: tipo, endereço, usuário/senha e grupo. Aceita
+  `servidor:porta`, `usuario@servidor` e `DOMINIO\usuario`, avisa se o endereço já está cadastrado e
+  permite **Criar e conectar** direto. As opções avançadas ficam em **Editar**.
 - **Lista de conexões** agrupada, com busca por nome, host, grupo ou usuário.
 - **Detalhes da conexão** em modo leitura, com botões **Conectar** e **Editar**. No modo edição, as
   alterações são salvas automaticamente (Ctrl+S grava na hora).
@@ -84,9 +87,12 @@ As senhas são protegidas pelo DPAPI do usuário do Windows: só a sua conta, ne
 RemoteMan/
 ├── App.xaml(.cs)            # inicialização, estado compartilhado e estilos comuns
 ├── MainWindow.xaml(.cs)     # janela com barra de título e menu de navegação
+├── Assets/
+│   └── AppIcon.ico / .png   # ícone do app (.exe, janela e barra de título)
 ├── Views/
 │   ├── DashboardPage        # tela inicial
 │   ├── ConnectionsPage      # lista, detalhes e editor de conexões
+│   ├── NewConnectionDialog  # diálogo de criação com os campos essenciais
 │   └── SettingsPage         # ambiente e informações do app
 ├── Controls/
 │   ├── ConnectionItem       # linha padrão de conexão usada em todas as listas
@@ -106,3 +112,6 @@ RemoteMan/
 └── Helpers/
     └── Ui                   # funções usadas nos x:Bind da interface
 ```
+
+O ícone é gerado por `tools/generate_icon.py` (requer Pillow). Para alterá-lo, edite o script e rode
+`python tools/generate_icon.py`; ele recria `RemoteMan/Assets/AppIcon.ico` (16 a 256 px) e `AppIcon.png`.
