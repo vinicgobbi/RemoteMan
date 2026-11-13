@@ -1,0 +1,72 @@
+# A cada push na main: roda o CI e, se houver commits que geram versão (feat, fix, perf, refactor, "!"),
+# o commitizen atualiza versão e CHANGELOG, cria a tag e dispara o release.
+#
+# O commit e a tag de bump são enviados com o GITHUB_TOKEN, que não dispara novos workflows:
+# por isso não há loop e o release é chamado diretamente daqui.
+name: Bump
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bump-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  bump:
+    name: Bump de versão
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      bumped: ${{ steps.bump.outputs.bumped }}
+      version: ${{ steps.bump.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+
+      - name: Instalar commitizen
+        run: pip install "commitizen==4.19.3"
+
+      - name: cz bump
+        id: bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          before="$(cz version --project)"
+          # 21 = nenhum commit que gere versão desde a última tag: não é erro
+          cz bump --yes --no-raise 21
+          after="$(cz version --project)"
+
+          if [ "$before" = "$after" ]; then
+            echo "Nada para versionar."
+            echo "bumped=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git push origin "HEAD:${GITHUB_REF_NAME}" "v${after}"
+          echo "bumped=true" >> "$GITHUB_OUTPUT"
+          echo "version=${after}" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: bump
+    if: needs.bump.outputs.bumped == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    with:
+      version: ${{ needs.bump.outputs.version }}
