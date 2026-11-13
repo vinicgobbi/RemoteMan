@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using RemoteMan.Models;
+using RemoteMan.Services;
 
 namespace RemoteMan.Helpers;
 
@@ -105,6 +106,18 @@ public static class Ui
             return "Não informado";
         return p == ConnectionProtocol.Rdp && !string.IsNullOrWhiteSpace(domain) ? $"{domain.Trim()}\\{user}" : user;
     }
+
+    /// <summary>Resumo dos túneis para o modo leitura (ex.: "L 8080:localhost:80 · D 1080").</summary>
+    public static string TunnelsText(string? text)
+    {
+        var tunnels = SshTunnels.Parse(text).Tunnels;
+        return tunnels.Count == 0 ? "—" : string.Join(" · ", tunnels.Select(t => t.Line));
+    }
+
+    /// <summary>Erros de validação dos túneis (vazio se tudo certo).</summary>
+    public static string TunnelErrors(string? text) => string.Join("\n", SshTunnels.Parse(text).Errors);
+
+    public static Visibility TunnelErrorsVisibility(string? text) => VisibleIf(SshTunnels.Parse(text).Errors.Count > 0);
 
     public static string PasswordText(bool hasSaved) => hasSaved ? "Salva no Windows" : "Nenhuma senha salva";
 

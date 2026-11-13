@@ -33,7 +33,7 @@ public static class SshLauncher
     }
 
     private static List<string> BuildSshArgs(Connection c) =>
-        SshArguments.Build(c.Host, (int)c.Port, c.Username, c.KeyFile, c.JumpHost);
+        SshArguments.Build(c.Host, (int)c.Port, c.Username, c.KeyFile, c.JumpHost, SshTunnels.Parse(c.Tunnels).Tunnels);
 
     private static string FindSsh() => FindSshPath() ?? "ssh.exe";
 

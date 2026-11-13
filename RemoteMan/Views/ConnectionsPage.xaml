@@ -345,6 +345,10 @@
                                         Label="Conectar via"
                                         Value="{x:Bind h:Ui.OrDash(ViewModel.Selected.JumpHost), Mode=OneWay}"
                                         Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}" />
+                                    <c:FieldRow
+                                        Label="Túneis"
+                                        Value="{x:Bind h:Ui.TunnelsText(ViewModel.Selected.Tunnels), Mode=OneWay}"
+                                        Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}" />
                                 </StackPanel>
                             </Border>
 
@@ -482,6 +486,35 @@
                                         Margin="0,-8,0,0"
                                         Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}"
                                         Text="Servidor intermediário usado para chegar até este (ssh -J). Separe vários com vírgula." />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardStyle}" Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Túneis (port forwarding)" Style="{StaticResource SectionTitleStyle}" />
+                                    <TextBlock Style="{StaticResource SecondaryCaptionStyle}" TextWrapping="Wrap">
+                                        <Run Text="Um por linha. " />
+                                        <Run Text="L 8080:localhost:80" FontFamily="Consolas" />
+                                        <Run Text=" abre a porta 8080 aqui e leva ao destino visto pelo servidor; " />
+                                        <Run Text="R 9000:localhost:3000" FontFamily="Consolas" />
+                                        <Run Text=" abre a 9000 no servidor; " />
+                                        <Run Text="D 1080" FontFamily="Consolas" />
+                                        <Run Text=" cria um proxy SOCKS local." />
+                                    </TextBlock>
+                                    <TextBox
+                                        AcceptsReturn="True"
+                                        TextWrapping="NoWrap"
+                                        MinHeight="72"
+                                        FontFamily="Consolas"
+                                        IsSpellCheckEnabled="False"
+                                        PlaceholderText="L 5432:db.interno:5432"
+                                        Text="{x:Bind ViewModel.Selected.Tunnels, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock
+                                        Style="{ThemeResource CaptionTextBlockStyle}"
+                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                        TextWrapping="Wrap"
+                                        Text="{x:Bind h:Ui.TunnelErrors(ViewModel.Selected.Tunnels), Mode=OneWay}"
+                                        Visibility="{x:Bind h:Ui.TunnelErrorsVisibility(ViewModel.Selected.Tunnels), Mode=OneWay}" />
                                 </StackPanel>
                             </Border>
 

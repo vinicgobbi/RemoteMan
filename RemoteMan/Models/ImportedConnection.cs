@@ -26,6 +26,9 @@ public sealed record ImportedConnection
     /// <summary>Jump host para o ssh -J (SSH).</summary>
     public string JumpHost { get; init; } = string.Empty;
 
+    /// <summary>Túneis SSH, um por linha (formato de Services.SshTunnels).</summary>
+    public string Tunnels { get; init; } = string.Empty;
+
     // --- RDP ---
     public bool? FullScreen { get; init; }
     public int? DesktopWidth { get; init; }

@@ -26,6 +26,8 @@ public static class SshConfigWriter
                 sb.Append("    IdentityFile ").Append(Quote(c.KeyFile.Trim())).Append('\n');
             if (SshArguments.NormalizeJumpHost(c.JumpHost) is { Length: > 0 } jump)
                 sb.Append("    ProxyJump ").Append(jump).Append('\n');
+            foreach (var tunnel in SshTunnels.Parse(c.Tunnels).Tunnels)
+                sb.Append("    ").Append(SshTunnels.ToConfigLine(tunnel)).Append('\n');
         }
         return sb.ToString();
     }

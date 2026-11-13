@@ -27,6 +27,7 @@ public partial class Connection : ObservableObject
         Domain = string.Empty;
         KeyFile = string.Empty;
         JumpHost = string.Empty;
+        Tunnels = string.Empty;
         GatewayHost = string.Empty;
         GatewayUseSameCredentials = true;
         Notes = string.Empty;
@@ -82,6 +83,9 @@ public partial class Connection : ObservableObject
     /// <summary>Servidor(es) intermediário(s) para o ssh -J (ex.: "bastion" ou "user@gw:2222,outro").</summary>
     [ObservableProperty] public partial string JumpHost { get; set; }
 
+    /// <summary>Túneis SSH, um por linha (ex.: "L 8080:localhost:80", "D 1080"). Ver Services.SshTunnels.</summary>
+    [ObservableProperty] public partial string Tunnels { get; set; }
+
     /// <summary>Cópia com novo Id (não usa MemberwiseClone para não copiar os handlers de PropertyChanged).</summary>
     public Connection Clone() => new()
     {
@@ -103,6 +107,7 @@ public partial class Connection : ObservableObject
         AdminSession = AdminSession,
         KeyFile = KeyFile,
         JumpHost = JumpHost,
+        Tunnels = Tunnels,
         GatewayHost = GatewayHost,
         GatewayBypassLocal = GatewayBypassLocal,
         GatewayUseSameCredentials = GatewayUseSameCredentials,

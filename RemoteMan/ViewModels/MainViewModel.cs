@@ -194,6 +194,7 @@ public partial class MainViewModel : ObservableObject
         UseWindowsCredentials = c.UseWindowsCredentials,
         KeyFile = c.KeyFile,
         JumpHost = c.JumpHost,
+        Tunnels = c.Tunnels,
         FullScreen = c.FullScreen,
         DesktopWidth = (int)c.DesktopWidth,
         DesktopHeight = (int)c.DesktopHeight,
@@ -238,6 +239,7 @@ public partial class MainViewModel : ObservableObject
                 Domain = i.Domain,
                 KeyFile = i.KeyFile,
                 JumpHost = i.JumpHost,
+                Tunnels = i.Tunnels,
                 GatewayHost = i.GatewayHost,
             };
             // opções RDP ausentes no arquivo mantêm o padrão do app
@@ -383,15 +385,17 @@ public partial class MainViewModel : ObservableObject
             else
             {
                 SshLauncher.Launch(c);
+                var tunnelWarning = TunnelWarning(c.Tunnels);
+                var severity = tunnelWarning is null ? InfoBarSeverity.Success : InfoBarSeverity.Warning;
                 // o ssh.exe não aceita senha por argumento: deixa ela pronta para colar
                 if (password is not null && string.IsNullOrWhiteSpace(c.KeyFile))
                 {
                     CopyToClipboard(password);
-                    ShowStatus($"Abrindo {c.Name}. Senha copiada — cole com clique direito no terminal.", InfoBarSeverity.Success);
+                    ShowStatus($"Abrindo {c.Name}. Senha copiada — cole com clique direito no terminal.{tunnelWarning}", severity);
                 }
                 else
                 {
-                    ShowStatus($"Abrindo {c.Name} no terminal…", InfoBarSeverity.Success);
+                    ShowStatus($"Abrindo {c.Name} no terminal…{tunnelWarning}", severity);
                 }
             }
 
@@ -405,6 +409,42 @@ public partial class MainViewModel : ObservableObject
         {
             ShowStatus($"Falha ao abrir a conexão: {ex.Message}", InfoBarSeverity.Error);
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Aviso (começando com espaço) sobre túneis ignorados por erro ou com porta local já em uso; null se tudo certo.
+    /// </summary>
+    private static string? TunnelWarning(string tunnelsText)
+    {
+        var (tunnels, errors) = SshTunnels.Parse(tunnelsText);
+        var parts = new List<string>();
+        if (errors.Count > 0)
+            parts.Add($"{errors.Count} {(errors.Count == 1 ? "túnel inválido foi ignorado" : "túneis inválidos foram ignorados")}");
+
+        var busy = tunnels
+            .Where(t => t.ListensLocally)
+            .Select(t => t.Port)
+            .Where(IsLocalPortInUse)
+            .Distinct()
+            .ToList();
+        if (busy.Count > 0)
+            parts.Add($"porta local já em uso: {string.Join(", ", busy)} (o túnel pode falhar)");
+
+        return parts.Count == 0 ? null : $" Atenção: {string.Join("; ", parts)}.";
+    }
+
+    private static bool IsLocalPortInUse(int port)
+    {
+        try
+        {
+            return System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties()
+                .GetActiveTcpListeners()
+                .Any(e => e.Port == port);
+        }
+        catch (System.Net.NetworkInformation.NetworkInformationException)
+        {
+            return false; // sem como verificar: não bloqueia
         }
     }
 
