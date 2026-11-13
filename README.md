@@ -55,6 +55,33 @@ direto do `.exe` gerado em `RemoteMan\bin\x64\<Configuração>\net10.0-windows10
 > O repositório inclui um `nuget.config` apontando para o nuget.org, para o restore funcionar mesmo em
 > máquinas sem fonte de pacotes configurada.
 
+Para rodar os testes:
+
+```powershell
+dotnet test --project RemoteMan.Tests
+```
+
+## Versionamento e releases
+
+Os commits seguem [Conventional Commits](https://www.conventionalcommits.org/pt-br/v1.0.0/) e a versão é
+controlada pelo [Commitizen](https://commitizen-tools.github.io/commitizen/) (`.cz.toml`).
+
+| Workflow | Quando roda | O que faz |
+|---|---|---|
+| `ci.yml` | Pull requests | Valida as mensagens de commit (`cz check`), roda os testes e compila x64/ARM64 |
+| `bump.yml` | Push na `main` | Roda o CI; se houver `feat`, `fix`, `perf`, `refactor` ou `!`, faz o `cz bump` (versão no `.csproj`, `CHANGELOG.md` e tag `vX.Y.Z`) e chama o release |
+| `release.yml` | Chamado pelo bump ou push de tag `v*` | Publica os `.zip` self-contained (x64 e ARM64) e cria o GitHub Release com as notas do CHANGELOG |
+
+Enquanto a versão for `0.x`, `feat` sobe a *minor* e `fix`/`perf`/`refactor` sobem a *patch*. Commits
+`docs`, `chore`, `ci`, `test` etc. não geram versão.
+
+Para conferir localmente (requer `pip install commitizen`):
+
+```powershell
+cz check --rev-range origin/main..HEAD   # valida as mensagens dos seus commits
+cz bump --dry-run                        # mostra qual seria a próxima versão
+```
+
 ## Onde ficam os dados
 
 | O quê | Onde |
@@ -102,7 +129,8 @@ RemoteMan/
 │   ├── DashboardViewModel   # favoritos, recentes e resumo do Início
 │   └── ConnectionGroup      # agrupamento da lista
 ├── Models/
-│   └── Connection           # modelo de uma conexão
+│   ├── Connection           # modelo de uma conexão
+│   └── ConnectionAddress    # interpreta o endereço digitado (host:porta, usuario@host…)
 ├── Services/
 │   ├── ConnectionStore      # leitura/gravação do connections.json
 │   ├── CredentialStore      # Gerenciador de Credenciais (advapi32)
