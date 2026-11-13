@@ -1,3 +1,14 @@
+## v0.4.0 (2026-11-13)
+
+### Feat
+
+- **credenciais**: adiciona credenciais compartilhadas entre conexões
+- **status**: adiciona monitoramento contínuo com notificações
+- **ssh**: adiciona túneis SSH (port forwarding)
+- **exportacao**: exporta conexões e importa backups do RemoteMan
+- **rdp**: adiciona suporte a RD Gateway
+- **conexoes**: permite conectar a todas as conexões de um grupo
+
 ## v0.3.0 (2026-11-13)
 
 ### Feat
