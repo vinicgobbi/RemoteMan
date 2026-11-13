@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
 using RemoteMan.Models;
+using RemoteMan.Services;
 using RemoteMan.ViewModels;
 using Windows.Storage.Pickers;
 
@@ -71,6 +72,12 @@ public sealed partial class ConnectionsPage : Page
 
     private async void NewConnection_Click(object sender, RoutedEventArgs e) =>
         await App.MainWindow.NewConnectionAsync();
+
+    private async void Import_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: string tag } && Enum.TryParse<ImportSource>(tag, out var source))
+            await App.MainWindow.ImportAsync(source);
+    }
 
     private async void Delete_Click(object sender, RoutedEventArgs e)
     {

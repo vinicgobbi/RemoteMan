@@ -179,6 +179,46 @@ public partial class MainViewModel : ObservableObject
             ShowStatus($"\"{c.Name}\" criada.", InfoBarSeverity.Success);
     }
 
+    /// <summary>Adiciona conexões vindas da importação e seleciona a primeira.</summary>
+    public void ImportConnections(IReadOnlyList<ImportedConnection> items, string group)
+    {
+        if (items.Count == 0)
+            return;
+
+        var added = items.Select(i =>
+        {
+            var c = new Connection
+            {
+                Protocol = i.Protocol,
+                Name = i.Name,
+                Group = group,
+                Host = i.Host,
+                Port = i.Port,
+                Username = i.Username,
+                Domain = i.Domain,
+                KeyFile = i.KeyFile,
+            };
+            // opções RDP ausentes no arquivo mantêm o padrão do app
+            if (i.FullScreen is { } fullScreen) c.FullScreen = fullScreen;
+            if (i.DesktopWidth is { } width) c.DesktopWidth = width;
+            if (i.DesktopHeight is { } height) c.DesktopHeight = height;
+            if (i.MultiMonitor is { } multiMonitor) c.MultiMonitor = multiMonitor;
+            if (i.RedirectClipboard is { } clipboard) c.RedirectClipboard = clipboard;
+            if (i.RedirectDrives is { } drives) c.RedirectDrives = drives;
+            if (i.AdminSession is { } admin) c.AdminSession = admin;
+            return c;
+        }).ToList();
+
+        _connections.AddRange(added);
+        SearchText = string.Empty;
+        RefreshGroups();
+        Selected = added[0];
+        IsEditing = false;
+        if (SaveToDisk())
+            ShowStatus(added.Count == 1 ? $"\"{added[0].Name}\" importada." : $"{added.Count} conexões importadas.", InfoBarSeverity.Success);
+        _ = CheckStatusAsync(); // já mostra quais servidores importados respondem
+    }
+
     [RelayCommand]
     private void Edit()
     {
