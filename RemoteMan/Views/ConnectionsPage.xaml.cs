@@ -69,6 +69,9 @@ public sealed partial class ConnectionsPage : Page
         args.Handled = true;
     }
 
+    private async void NewConnection_Click(object sender, RoutedEventArgs e) =>
+        await App.MainWindow.NewConnectionAsync();
+
     private async void Delete_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel.Selected is not { } c)

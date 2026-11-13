@@ -137,24 +137,46 @@ public partial class MainViewModel : ObservableObject
 
     // --- Comandos de criação e edição ---
 
-    [RelayCommand]
-    private void NewRdp() => AddNew(ConnectionProtocol.Rdp);
+    /// <summary>Grupos já usados (sugestões no diálogo de nova conexão).</summary>
+    public IReadOnlyList<string> GroupNames =>
+        _connections
+            .Select(c => c.Group.Trim())
+            .Where(g => g.Length > 0)
+            .Distinct(StringComparer.CurrentCultureIgnoreCase)
+            .Order(StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
 
-    [RelayCommand]
-    private void NewSsh() => AddNew(ConnectionProtocol.Ssh);
-
-    private void AddNew(ConnectionProtocol protocol)
+    /// <summary>Adiciona uma conexão vinda do diálogo "Nova conexão" e a seleciona (modo leitura).</summary>
+    public void AddConnection(Connection c, string? password, bool connect)
     {
-        var c = Connection.Create(protocol);
-        c.Group = Selected?.Group ?? string.Empty;
         _connections.Add(c);
 
-        SearchText = string.Empty; // garante que a nova apareça (dispara RefreshGroups)
+        // grava a senha antes de selecionar, para o painel já mostrar "Salva no Windows"
+        var passwordFailed = false;
+        if (!string.IsNullOrEmpty(password))
+        {
+            try
+            {
+                CredentialStore.Write(CredentialStore.KeyFor(c), c.Username, password);
+            }
+            catch (Exception ex)
+            {
+                passwordFailed = true;
+                ShowStatus($"Conexão criada, mas a senha não foi salva: {ex.Message}", InfoBarSeverity.Warning);
+            }
+        }
+
+        SearchText = string.Empty; // garante que a nova apareça na lista
         RefreshGroups();
         Selected = c;
-        IsEditing = true;
-        SaveToDisk();
-        ShowStatus("Conexão criada. Preencha os dados; as alterações são salvas automaticamente.", InfoBarSeverity.Informational);
+        IsEditing = false;
+        if (!SaveToDisk())
+            return;
+
+        if (connect)
+            ConnectTo(c);
+        else if (!passwordFailed)
+            ShowStatus($"\"{c.Name}\" criada.", InfoBarSeverity.Success);
     }
 
     [RelayCommand]

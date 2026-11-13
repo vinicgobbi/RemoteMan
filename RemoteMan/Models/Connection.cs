@@ -73,13 +73,6 @@ public partial class Connection : ObservableObject
     // --- SSH ---
     [ObservableProperty] public partial string KeyFile { get; set; }
 
-    public static Connection Create(ConnectionProtocol protocol) => new()
-    {
-        Protocol = protocol,
-        Name = protocol == ConnectionProtocol.Rdp ? "Nova conexão RDP" : "Nova conexão SSH",
-        Port = protocol == ConnectionProtocol.Rdp ? 3389 : 22,
-    };
-
     /// <summary>Cópia com novo Id (não usa MemberwiseClone para não copiar os handlers de PropertyChanged).</summary>
     public Connection Clone() => new()
     {

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="RemoteMan.Views.NewConnectionDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Style="{StaticResource DefaultContentDialogStyle}"
+    Title="Nova conexão"
+    PrimaryButtonText="Criar e conectar"
+    SecondaryButtonText="Criar"
+    CloseButtonText="Cancelar"
+    DefaultButton="Secondary"
+    IsPrimaryButtonEnabled="False"
+    IsSecondaryButtonEnabled="False"
+    PrimaryButtonClick="Primary_Click"
+    SecondaryButtonClick="Secondary_Click"
+    Opened="Dialog_Opened">
+
+    <!--
+        Só o essencial para começar a usar a conexão. Resolução, chave SSH, notas etc.
+        ficam no editor completo ("Editar") da tela de conexões.
+    -->
+    <StackPanel Width="440" Spacing="16" KeyDown="Content_KeyDown">
+
+        <RadioButtons x:Name="ProtocolSelector" Header="Tipo" MaxColumns="2" SelectionChanged="Protocol_SelectionChanged">
+            <RadioButton>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE7F4;" FontSize="16" />
+                    <TextBlock Text="Área de trabalho (RDP)" />
+                </StackPanel>
+            </RadioButton>
+            <RadioButton>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE756;" FontSize="16" />
+                    <TextBlock Text="Terminal (SSH)" />
+                </StackPanel>
+            </RadioButton>
+        </RadioButtons>
+
+        <StackPanel Spacing="4">
+            <TextBox
+                x:Name="AddressBox"
+                Header="Endereço do servidor"
+                PlaceholderText="servidor.empresa.local ou 192.168.0.10"
+                IsSpellCheckEnabled="False"
+                TextChanged="Address_TextChanged" />
+            <TextBlock x:Name="AddressHint" Style="{StaticResource SecondaryCaptionStyle}" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <InfoBar
+            x:Name="DuplicateInfo"
+            Severity="Warning"
+            IsClosable="False"
+            IsOpen="False" />
+
+        <Grid ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="NameBox" Header="Nome (opcional)" PlaceholderText="Igual ao endereço" />
+            <ComboBox
+                x:Name="GroupBox"
+                Grid.Column="1"
+                Header="Grupo (opcional)"
+                PlaceholderText="Sem grupo"
+                IsEditable="True"
+                HorizontalAlignment="Stretch" />
+        </Grid>
+
+        <StackPanel Spacing="8">
+            <CheckBox
+                x:Name="WindowsLoginBox"
+                Content="Entrar com meu login do Windows"
+                Checked="WindowsLogin_Changed"
+                Unchecked="WindowsLogin_Changed" />
+
+            <Grid x:Name="CredentialsPanel" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="UserBox" Header="Usuário" IsSpellCheckEnabled="False" />
+                <PasswordBox x:Name="PasswordInput" Grid.Column="1" Header="Senha" PlaceholderText="Opcional" />
+            </Grid>
+        </StackPanel>
+
+        <TextBlock
+            x:Name="FooterHint"
+            Style="{StaticResource SecondaryCaptionStyle}"
+            TextWrapping="Wrap" />
+    </StackPanel>
+</ContentDialog>

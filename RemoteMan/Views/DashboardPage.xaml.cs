@@ -29,15 +29,6 @@ public sealed partial class DashboardPage : Page
             App.MainWindow.ShowConnections(c);
     }
 
-    private void NewRdp_Click(object sender, RoutedEventArgs e)
-    {
-        App.ViewModel.NewRdpCommand.Execute(null);
-        App.MainWindow.ShowConnections();
-    }
-
-    private void NewSsh_Click(object sender, RoutedEventArgs e)
-    {
-        App.ViewModel.NewSshCommand.Execute(null);
-        App.MainWindow.ShowConnections();
-    }
+    private async void NewConnection_Click(object sender, RoutedEventArgs e) =>
+        await App.MainWindow.NewConnectionAsync();
 }

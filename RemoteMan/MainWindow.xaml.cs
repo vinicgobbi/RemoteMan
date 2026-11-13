@@ -1,6 +1,7 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using RemoteMan.Models;
@@ -40,6 +41,43 @@ public sealed partial class MainWindow : Window
         if (select is not null)
             ViewModel.Reveal(select);
         NavView.SelectedItem = ConnectionsNavItem;
+    }
+
+    private bool _newConnectionOpen;
+
+    /// <summary>Abre o diálogo "Nova conexão" (botões das telas e Ctrl+N).</summary>
+    public async Task NewConnectionAsync()
+    {
+        if (_newConnectionOpen)
+            return;
+        _newConnectionOpen = true;
+
+        try
+        {
+            var dialog = new NewConnectionDialog(ViewModel.GroupNames, ViewModel.Selected?.Group, ViewModel.Connections)
+            {
+                XamlRoot = Content.XamlRoot,
+            };
+            await dialog.ShowAsync();
+
+            if (dialog.Result is not { } c)
+                return;
+
+            ViewModel.AddConnection(c, dialog.Password, dialog.ConnectAfter);
+            // "Criar" leva aos detalhes; "Criar e conectar" deixa o usuário onde estava
+            if (!dialog.ConnectAfter)
+                ShowConnections(c);
+        }
+        finally
+        {
+            _newConnectionOpen = false;
+        }
+    }
+
+    private async void NewConnectionAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        await NewConnectionAsync();
     }
 
     private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
