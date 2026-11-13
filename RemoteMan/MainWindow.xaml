@@ -8,6 +8,7 @@
     <Grid x:Name="RootGrid">
         <Grid.KeyboardAccelerators>
             <KeyboardAccelerator Key="N" Modifiers="Control" Invoked="NewConnectionAccelerator_Invoked" />
+            <KeyboardAccelerator Key="K" Modifiers="Control" Invoked="QuickConnectAccelerator_Invoked" />
         </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition Height="48" />

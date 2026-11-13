@@ -198,6 +198,32 @@ public sealed partial class MainWindow : Window
         await NewConnectionAsync();
     }
 
+    /// <summary>Abre a conexão rápida (Ctrl+K): busca e conecta sem sair da tela atual.</summary>
+    public async Task QuickConnectAsync()
+    {
+        if (_dialogOpen)
+            return;
+        _dialogOpen = true;
+
+        try
+        {
+            var dialog = new QuickConnectDialog(ViewModel.Connections) { XamlRoot = Content.XamlRoot };
+            await dialog.ShowAsync();
+            if (dialog.Result is { } c)
+                ViewModel.ConnectTo(c);
+        }
+        finally
+        {
+            _dialogOpen = false;
+        }
+    }
+
+    private async void QuickConnectAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        await QuickConnectAsync();
+    }
+
     private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
         var tag = (args.SelectedItem as NavigationViewItem)?.Tag as string;
