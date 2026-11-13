@@ -7,10 +7,30 @@ namespace RemoteMan.Services;
 /// <summary>Gera um arquivo .rdp temporário e abre o mstsc.exe.</summary>
 public static class RdpLauncher
 {
+    /// <summary>Opções do .rdp para uma conexão (usadas ao conectar e ao exportar).</summary>
+    public static RdpFileOptions OptionsFor(Connection c, string? username) => new()
+    {
+        Host = c.Host.Trim(),
+        Port = (int)c.Port,
+        Username = username,
+        FullScreen = c.FullScreen,
+        DesktopWidth = (int)c.DesktopWidth,
+        DesktopHeight = (int)c.DesktopHeight,
+        MultiMonitor = c.MultiMonitor,
+        RedirectClipboard = c.RedirectClipboard,
+        RedirectDrives = c.RedirectDrives,
+        GatewayHost = c.GatewayHost,
+        GatewayBypassLocal = c.GatewayBypassLocal,
+        GatewayUseSameCredentials = c.GatewayUseSameCredentials,
+    };
+
+    /// <summary>Usuário gravado no .rdp exportado (sem o usuário do Windows, que é de quem abrir o arquivo).</summary>
+    public static string? ExportUsername(Connection c) =>
+        c.UseWindowsCredentials || string.IsNullOrWhiteSpace(c.Username) ? null : c.FullUsername;
+
     public static void Launch(Connection c, string? password)
     {
         var host = c.Host.Trim();
-        var port = (int)c.Port;
 
         string? username;
         if (c.UseWindowsCredentials)
@@ -30,21 +50,7 @@ public static class RdpLauncher
                 CredentialStore.Write(CredentialStore.RdpKeyFor(host), username, password);
         }
 
-        var content = RdpFileBuilder.Build(new RdpFileOptions
-        {
-            Host = host,
-            Port = port,
-            Username = username,
-            FullScreen = c.FullScreen,
-            DesktopWidth = (int)c.DesktopWidth,
-            DesktopHeight = (int)c.DesktopHeight,
-            MultiMonitor = c.MultiMonitor,
-            RedirectClipboard = c.RedirectClipboard,
-            RedirectDrives = c.RedirectDrives,
-            GatewayHost = c.GatewayHost,
-            GatewayBypassLocal = c.GatewayBypassLocal,
-            GatewayUseSameCredentials = c.GatewayUseSameCredentials,
-        });
+        var content = RdpFileBuilder.Build(OptionsFor(c, username));
 
         var dir = Path.Combine(Path.GetTempPath(), "RemoteMan");
         Directory.CreateDirectory(dir);

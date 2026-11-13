@@ -38,10 +38,24 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="1" ToolTipService.ToolTip="Importar conexões">
+                <Button Grid.Column="1" ToolTipService.ToolTip="Importar e exportar">
                     <FontIcon Glyph="&#xE8B5;" Style="{StaticResource ButtonIconStyle}" />
                     <Button.Flyout>
                         <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                            <MenuFlyoutSubItem Text="Exportar">
+                                <MenuFlyoutSubItem.Icon>
+                                    <FontIcon Glyph="&#xEDE1;" />
+                                </MenuFlyoutSubItem.Icon>
+                                <MenuFlyoutItem Text="Backup do RemoteMan (.json)…" Tag="Backup" Click="Export_Click" />
+                                <MenuFlyoutItem Text="Conexões RDP (arquivos .rdp)…" Tag="RdpFiles" Click="Export_Click" />
+                                <MenuFlyoutItem Text="Perfis SSH (ssh config)…" Tag="SshConfig" Click="Export_Click" />
+                            </MenuFlyoutSubItem>
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Text="Backup do RemoteMan (.json)…" Tag="Backup" Click="Import_Click">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE8B5;" />
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
                             <MenuFlyoutItem Text="Arquivos .rdp…" Tag="RdpFiles" Click="Import_Click">
                                 <MenuFlyoutItem.Icon>
                                     <FontIcon Glyph="&#xE7F4;" />
@@ -117,6 +131,11 @@
                                                     <FontIcon Glyph="&#xE768;" />
                                                 </MenuFlyoutItem.Icon>
                                             </MenuFlyoutItem>
+                                            <MenuFlyoutItem Text="Exportar grupo (backup .json)…" Tag="{x:Bind}" Click="ExportGroup_Click">
+                                                <MenuFlyoutItem.Icon>
+                                                    <FontIcon Glyph="&#xEDE1;" />
+                                                </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
                                         </MenuFlyout>
                                     </Grid.ContextFlyout>
                                     <TextBlock Text="{x:Bind Key}" Style="{StaticResource SectionTitleStyle}" VerticalAlignment="Center" />
@@ -131,6 +150,11 @@
                                                 <MenuFlyoutItem Text="{x:Bind ConnectAllText}" Tag="{x:Bind}" Click="ConnectGroup_Click">
                                                     <MenuFlyoutItem.Icon>
                                                         <FontIcon Glyph="&#xE768;" />
+                                                    </MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Exportar grupo (backup .json)…" Tag="{x:Bind}" Click="ExportGroup_Click">
+                                                    <MenuFlyoutItem.Icon>
+                                                        <FontIcon Glyph="&#xEDE1;" />
                                                     </MenuFlyoutItem.Icon>
                                                 </MenuFlyoutItem>
                                             </MenuFlyout>

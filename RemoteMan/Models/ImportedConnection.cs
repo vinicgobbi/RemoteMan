@@ -14,6 +14,12 @@ public sealed record ImportedConnection
     public string Username { get; init; } = string.Empty;
     public string Domain { get; init; } = string.Empty;
 
+    /// <summary>Grupo de origem (backup do RemoteMan); vazio nas demais fontes.</summary>
+    public string Group { get; init; } = string.Empty;
+    public string Notes { get; init; } = string.Empty;
+    public bool IsFavorite { get; init; }
+    public bool? UseWindowsCredentials { get; init; }
+
     /// <summary>Chave privada (SSH).</summary>
     public string KeyFile { get; init; } = string.Empty;
 

@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using RemoteMan.Models;
 using RemoteMan.Services;
+using RemoteMan.Services.Importers;
 using RemoteMan.ViewModels;
 using RemoteMan.Views;
 using Windows.Graphics;
@@ -121,6 +122,14 @@ public sealed partial class MainWindow : Window
                     sourceName = picked[0];
                     break;
 
+                case ImportSource.Backup:
+                    var backup = await PickFilesAsync(multiple: false, ".json");
+                    if (backup.Count == 0)
+                        return;
+                    result = ImportSources.ReadBackup(backup[0]);
+                    sourceName = Path.GetFileName(backup[0]);
+                    break;
+
                 default:
                     result = ImportSources.ReadPuttySessions();
                     sourceName = "sessões do PuTTY";
@@ -149,6 +158,92 @@ public sealed partial class MainWindow : Window
         {
             _dialogOpen = false;
         }
+    }
+
+    /// <summary>
+    /// Exporta conexões (todas ou as informadas, ex.: um grupo). Senhas nunca são exportadas.
+    /// </summary>
+    /// <param name="scopeName">Usado no nome sugerido do arquivo (ex.: nome do grupo).</param>
+    public async Task ExportAsync(ExportKind kind, IReadOnlyList<Connection>? subset = null, string? scopeName = null)
+    {
+        var source = (subset ?? ViewModel.Connections).Where(c => !string.IsNullOrWhiteSpace(c.Host)).ToList();
+        var now = DateTime.Now;
+        var suffix = scopeName is null ? now.ToString("yyyy-MM-dd") : $"{scopeName}-{now:yyyy-MM-dd}";
+
+        try
+        {
+            switch (kind)
+            {
+                case ExportKind.Backup:
+                {
+                    if (source.Count == 0)
+                        break;
+                    var path = await PickSaveFileAsync($"RemoteMan-backup-{suffix}", "Backup do RemoteMan", ".json");
+                    if (path is null)
+                        return;
+                    await File.WriteAllTextAsync(path, BackupFile.Serialize(source.Select(MainViewModel.ToImported), now));
+                    ViewModel.ShowStatus($"{Plural(source.Count)} {(source.Count == 1 ? "exportada" : "exportadas")} para {Path.GetFileName(path)} (sem senhas).", InfoBarSeverity.Success);
+                    return;
+                }
+
+                case ExportKind.RdpFiles:
+                {
+                    source = source.Where(c => c.Protocol == ConnectionProtocol.Rdp).ToList();
+                    if (source.Count == 0)
+                        break;
+                    var folder = await PickFolderAsync();
+                    if (folder is null)
+                        return;
+                    var used = new HashSet<string>(
+                        Directory.EnumerateFiles(folder, "*.rdp").Select(Path.GetFileName)!, StringComparer.OrdinalIgnoreCase);
+                    foreach (var c in source)
+                    {
+                        var content = RdpFileBuilder.Build(RdpLauncher.OptionsFor(c, RdpLauncher.ExportUsername(c)));
+                        // UTF-16 com BOM, como o mstsc grava
+                        await File.WriteAllTextAsync(Path.Combine(folder, ExportNames.FileName(c.Name, ".rdp", used)), content, System.Text.Encoding.Unicode);
+                    }
+                    ViewModel.ShowStatus($"{Plural(source.Count)} RDP {(source.Count == 1 ? "exportada" : "exportadas")} como .rdp em {folder} (sem senhas).", InfoBarSeverity.Success);
+                    return;
+                }
+
+                case ExportKind.SshConfig:
+                {
+                    source = source.Where(c => c.Protocol == ConnectionProtocol.Ssh).ToList();
+                    if (source.Count == 0)
+                        break;
+                    var path = await PickSaveFileAsync($"ssh_config-remoteman-{suffix}", "Configuração SSH", ".conf");
+                    if (path is null)
+                        return;
+                    await File.WriteAllTextAsync(path, SshConfigWriter.Write(source.Select(MainViewModel.ToImported), now));
+                    ViewModel.ShowStatus($"{Plural(source.Count)} SSH {(source.Count == 1 ? "exportada" : "exportadas")} para {Path.GetFileName(path)}. Use com \"Include\" no ~/.ssh/config.", InfoBarSeverity.Success);
+                    return;
+                }
+            }
+
+            ViewModel.ShowStatus("Nenhuma conexão para exportar nesse formato.", InfoBarSeverity.Warning);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ViewModel.ShowStatus($"Falha ao exportar: {ex.Message}", InfoBarSeverity.Error);
+        }
+
+        static string Plural(int n) => n == 1 ? "1 conexão" : $"{n} conexões";
+    }
+
+    private static async Task<string?> PickSaveFileAsync(string suggestedName, string typeName, string extension)
+    {
+        var picker = new FileSavePicker { SuggestedFileName = suggestedName };
+        picker.FileTypeChoices.Add(typeName, [extension]);
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow));
+        return (await picker.PickSaveFileAsync())?.Path;
+    }
+
+    private static async Task<string?> PickFolderAsync()
+    {
+        var picker = new FolderPicker();
+        picker.FileTypeFilter.Add("*");
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow));
+        return (await picker.PickSingleFolderAsync())?.Path;
     }
 
     private static async Task<IReadOnlyList<string>> PickFilesAsync(bool multiple, string extension)

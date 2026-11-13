@@ -79,6 +79,19 @@ public sealed partial class ConnectionsPage : Page
             await App.MainWindow.ImportAsync(source);
     }
 
+    private async void Export_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: string tag } && Enum.TryParse<ExportKind>(tag, out var kind))
+            await App.MainWindow.ExportAsync(kind);
+    }
+
+    private async void ExportGroup_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: ConnectionGroup group })
+            // exporta o grupo inteiro, não só o que a busca atual está mostrando
+            await App.MainWindow.ExportAsync(ExportKind.Backup, ViewModel.ConnectionsInGroup(group.Key), group.Key);
+    }
+
     // acima disso, pede confirmação antes de abrir tudo
     private const int ConnectAllConfirmThreshold = 5;
 

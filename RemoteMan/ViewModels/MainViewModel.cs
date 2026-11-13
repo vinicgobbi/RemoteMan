@@ -179,7 +179,45 @@ public partial class MainViewModel : ObservableObject
             ShowStatus($"\"{c.Name}\" criada.", InfoBarSeverity.Success);
     }
 
-    /// <summary>Adiciona conexões vindas da importação e seleciona a primeira.</summary>
+    /// <summary>Conexão no formato neutro de importação/exportação (sem senha).</summary>
+    public static ImportedConnection ToImported(Connection c) => new()
+    {
+        Protocol = c.Protocol,
+        Name = c.Name,
+        Host = c.Host.Trim(),
+        Port = (int)c.Port,
+        Username = c.Username,
+        Domain = c.Domain,
+        Group = c.Group,
+        Notes = c.Notes,
+        IsFavorite = c.IsFavorite,
+        UseWindowsCredentials = c.UseWindowsCredentials,
+        KeyFile = c.KeyFile,
+        JumpHost = c.JumpHost,
+        FullScreen = c.FullScreen,
+        DesktopWidth = (int)c.DesktopWidth,
+        DesktopHeight = (int)c.DesktopHeight,
+        MultiMonitor = c.MultiMonitor,
+        RedirectClipboard = c.RedirectClipboard,
+        RedirectDrives = c.RedirectDrives,
+        AdminSession = c.AdminSession,
+        GatewayHost = c.GatewayHost,
+        GatewayBypassLocal = c.GatewayBypassLocal,
+        GatewayUseSameCredentials = c.GatewayUseSameCredentials,
+    };
+
+    /// <summary>Conexões de um grupo da lista ("Sem grupo" = conexões sem grupo).</summary>
+    public IReadOnlyList<Connection> ConnectionsInGroup(string groupKey) =>
+        _connections
+            .Where(c => groupKey == NoGroup
+                ? string.IsNullOrWhiteSpace(c.Group)
+                : string.Equals(c.Group.Trim(), groupKey, StringComparison.CurrentCultureIgnoreCase))
+            .ToList();
+
+    /// <summary>
+    /// Adiciona conexões vindas da importação e seleciona a primeira.
+    /// Grupo vazio mantém o grupo de origem de cada item (backup do RemoteMan).
+    /// </summary>
     public void ImportConnections(IReadOnlyList<ImportedConnection> items, string group)
     {
         if (items.Count == 0)
@@ -191,7 +229,9 @@ public partial class MainViewModel : ObservableObject
             {
                 Protocol = i.Protocol,
                 Name = i.Name,
-                Group = group,
+                Group = string.IsNullOrWhiteSpace(group) ? i.Group : group,
+                Notes = i.Notes,
+                IsFavorite = i.IsFavorite,
                 Host = i.Host,
                 Port = i.Port,
                 Username = i.Username,
@@ -208,6 +248,7 @@ public partial class MainViewModel : ObservableObject
             if (i.RedirectClipboard is { } clipboard) c.RedirectClipboard = clipboard;
             if (i.RedirectDrives is { } drives) c.RedirectDrives = drives;
             if (i.AdminSession is { } admin) c.AdminSession = admin;
+            if (i.UseWindowsCredentials is { } windows) c.UseWindowsCredentials = windows;
             if (i.GatewayBypassLocal is { } bypass) c.GatewayBypassLocal = bypass;
             if (i.GatewayUseSameCredentials is { } sameCredentials) c.GatewayUseSameCredentials = sameCredentials;
             return c;
