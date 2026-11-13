@@ -1,3 +1,13 @@
+## v0.3.0 (2026-11-13)
+
+### Feat
+
+- **conexoes**: adiciona conexão rápida com Ctrl+K
+- **atualizacoes**: avisa quando há nova versão disponível
+- **ssh**: adiciona suporte a jump host (ProxyJump)
+- **importacao**: importa conexões de .rdp, ~/.ssh/config e PuTTY
+- **ui**: permite escolher o efeito de fundo da janela
+
 ## v0.2.0 (2026-11-13)
 
 ### Feat

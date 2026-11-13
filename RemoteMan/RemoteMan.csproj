@@ -7,7 +7,7 @@
     <RootNamespace>RemoteMan</RootNamespace>
     <AssemblyName>RemoteMan</AssemblyName>
     <!-- versão do app: atualizada pelo commitizen (cz bump) -->
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- ícone do .exe (Explorer, atalhos); gerado por tools/generate_icon.py -->
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>

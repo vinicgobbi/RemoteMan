@@ -2,7 +2,7 @@
 # Versão em 0.x: "feat" sobe a minor, "fix"/"perf"/"refactor" sobem a patch e "!" não pula para 1.0.
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.2.0"
+version = "0.3.0"
 version_scheme = "semver2"
 tag_format = "v$version"
 annotated_tag = true
