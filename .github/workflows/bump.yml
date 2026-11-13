@@ -48,8 +48,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           before="$(cz version --project)"
-          # 21 = nenhum commit que gere versão desde a última tag: não é erro
-          cz bump --yes --no-raise 21
+          # 3 = nenhum commit novo; 21 = nenhum commit que gere versão (docs, chore…): não são erros
+          cz --no-raise 3,21 bump --yes
           after="$(cz version --project)"
 
           if [ "$before" = "$after" ]; then
