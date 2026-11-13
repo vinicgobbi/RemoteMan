@@ -17,6 +17,9 @@ public sealed record ImportedConnection
     /// <summary>Chave privada (SSH).</summary>
     public string KeyFile { get; init; } = string.Empty;
 
+    /// <summary>Jump host para o ssh -J (SSH).</summary>
+    public string JumpHost { get; init; } = string.Empty;
+
     // --- RDP ---
     public bool? FullScreen { get; init; }
     public int? DesktopWidth { get; init; }

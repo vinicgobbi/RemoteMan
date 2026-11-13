@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using RemoteMan.Models;
+using RemoteMan.Services;
 
 namespace RemoteMan.Services.Importers;
 
@@ -78,9 +79,10 @@ public static class SshConfigParser
                 continue;
             }
 
-            var warning = Get(options, "ProxyJump") is { Length: > 0 } jump && !jump.Equals("none", StringComparison.OrdinalIgnoreCase)
-                ? $"Usa ProxyJump ({jump}), que não é aplicado pelo RemoteMan."
-                : Get(options, "ProxyCommand") is { Length: > 0 } && !Get(options, "ProxyCommand")!.Equals("none", StringComparison.OrdinalIgnoreCase)
+            var jumpHost = SshArguments.NormalizeJumpHost(Get(options, "ProxyJump"));
+            var proxyCommand = Get(options, "ProxyCommand");
+            var warning = jumpHost.Length == 0 && proxyCommand is { Length: > 0 }
+                && !proxyCommand.Equals("none", StringComparison.OrdinalIgnoreCase)
                     ? "Usa ProxyCommand, que não é aplicado pelo RemoteMan."
                     : null;
 
@@ -92,6 +94,7 @@ public static class SshConfigParser
                 Port = port,
                 Username = Get(options, "User") ?? string.Empty,
                 KeyFile = ExpandPath(Get(options, "IdentityFile"), homeDir),
+                JumpHost = jumpHost,
                 Warning = warning,
             });
         }

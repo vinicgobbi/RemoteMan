@@ -32,24 +32,8 @@ public static class SshLauncher
         Process.Start(psi);
     }
 
-    private static List<string> BuildSshArgs(Connection c)
-    {
-        var args = new List<string>();
-        var port = (int)c.Port;
-        if (port is > 0 and not 22)
-        {
-            args.Add("-p");
-            args.Add(port.ToString());
-        }
-        if (!string.IsNullOrWhiteSpace(c.KeyFile))
-        {
-            args.Add("-i");
-            args.Add(c.KeyFile.Trim());
-        }
-        var host = c.Host.Trim();
-        args.Add(string.IsNullOrWhiteSpace(c.Username) ? host : $"{c.Username.Trim()}@{host}");
-        return args;
-    }
+    private static List<string> BuildSshArgs(Connection c) =>
+        SshArguments.Build(c.Host, (int)c.Port, c.Username, c.KeyFile, c.JumpHost);
 
     private static string FindSsh() => FindSshPath() ?? "ssh.exe";
 

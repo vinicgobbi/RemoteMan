@@ -282,6 +282,10 @@
                                         Label="Chave privada"
                                         Value="{x:Bind h:Ui.OrDash(ViewModel.Selected.KeyFile), Mode=OneWay}"
                                         Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}" />
+                                    <c:FieldRow
+                                        Label="Conectar via"
+                                        Value="{x:Bind h:Ui.OrDash(ViewModel.Selected.JumpHost), Mode=OneWay}"
+                                        Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}" />
                                 </StackPanel>
                             </Border>
 
@@ -406,6 +410,19 @@
                                             Text="{x:Bind ViewModel.Selected.KeyFile, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                         <Button Grid.Column="1" VerticalAlignment="Bottom" Content="Procurar…" Click="BrowseKey_Click" />
                                     </Grid>
+
+                                    <TextBox
+                                        Header="Conectar via (jump host, opcional)"
+                                        PlaceholderText="bastion.empresa.com ou usuario@bastion:2222"
+                                        IsSpellCheckEnabled="False"
+                                        Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}"
+                                        Text="{x:Bind ViewModel.Selected.JumpHost, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock
+                                        Style="{StaticResource SecondaryCaptionStyle}"
+                                        TextWrapping="Wrap"
+                                        Margin="0,-8,0,0"
+                                        Visibility="{x:Bind h:Ui.SshOnly(ViewModel.Selected.Protocol), Mode=OneWay}"
+                                        Text="Servidor intermediário usado para chegar até este (ssh -J). Separe vários com vírgula." />
                                 </StackPanel>
                             </Border>
 

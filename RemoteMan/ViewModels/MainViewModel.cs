@@ -197,6 +197,7 @@ public partial class MainViewModel : ObservableObject
                 Username = i.Username,
                 Domain = i.Domain,
                 KeyFile = i.KeyFile,
+                JumpHost = i.JumpHost,
             };
             // opções RDP ausentes no arquivo mantêm o padrão do app
             if (i.FullScreen is { } fullScreen) c.FullScreen = fullScreen;

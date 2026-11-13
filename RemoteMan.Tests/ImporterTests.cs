@@ -154,11 +154,22 @@ public class SshConfigParserTests
     }
 
     [Fact]
-    public void AvisaProxyJumpERejeitaPortaInvalida()
+    public void ImportaProxyJumpERejeitaPortaInvalida()
     {
-        var result = SshConfigParser.Parse("Host a\n  ProxyJump bastion\nHost b\n  Port 99999", Home);
-        Assert.Contains("ProxyJump", Assert.Single(result.Connections).Warning);
+        var result = SshConfigParser.Parse("Host a\n  ProxyJump bastion, user@gw:2222\nHost b\n  Port 99999", Home);
+        var a = Assert.Single(result.Connections);
+        Assert.Equal("bastion,user@gw:2222", a.JumpHost);
+        Assert.Null(a.Warning);
         Assert.Contains("b:", Assert.Single(result.Errors));
+    }
+
+    [Fact]
+    public void ProxyJumpNoneDesativaEProxyCommandGeraAviso()
+    {
+        var result = SshConfigParser.Parse("Host a\n  ProxyJump none\n  ProxyCommand nc %h %p\nHost *\n  ProxyJump bastion", Home);
+        var a = Assert.Single(result.Connections);
+        Assert.Equal("", a.JumpHost);
+        Assert.Contains("ProxyCommand", a.Warning);
     }
 
     [Fact]
