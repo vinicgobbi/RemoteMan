@@ -1,3 +1,9 @@
+## v0.2.0 (2026-11-13)
+
+### Feat
+
+- **instalador**: adiciona instalador do Windows com Inno Setup
+
 ## v0.1.0 (2026-11-12)
 
 ### Feat
