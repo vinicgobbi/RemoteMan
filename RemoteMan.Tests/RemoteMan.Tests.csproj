@@ -27,6 +27,8 @@
     <Compile Include="..\RemoteMan\Services\Importers\*.cs" Link="App\Importers\%(Filename)%(Extension)" />
     <Compile Include="..\RemoteMan\Services\SshArguments.cs" Link="App\SshArguments.cs" />
     <Compile Include="..\RemoteMan\Services\SshTunnels.cs" Link="App\SshTunnels.cs" />
+    <Compile Include="..\RemoteMan\Models\SftpClientKind.cs" Link="App\SftpClientKind.cs" />
+    <Compile Include="..\RemoteMan\Services\SftpArguments.cs" Link="App\SftpArguments.cs" />
     <Compile Include="..\RemoteMan\Services\StatusTransitions.cs" Link="App\StatusTransitions.cs" />
     <Compile Include="..\RemoteMan\Services\UpdateRelease.cs" Link="App\UpdateRelease.cs" />
     <Compile Include="..\RemoteMan\Services\QuickSearch.cs" Link="App\QuickSearch.cs" />
