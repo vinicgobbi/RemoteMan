@@ -59,6 +59,49 @@ public sealed partial class SettingsPage : Page
         App.ViewModel.ApplyMonitorSettings();
     }
 
+    // a página fica em cache: detecta de novo a cada visita (o usuário pode ter instalado um cliente)
+    protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+    {
+        base.OnNavigatedTo(e);
+        LoadSftpClients();
+    }
+
+    private void LoadSftpClients()
+    {
+        var installed = SftpLauncher.FindInstalled();
+        var chosen = SftpArguments.Choose(App.Settings.PreferredSftpClient, installed.Keys);
+
+        _loading = true;
+        SftpClientBox.Items.Clear();
+        foreach (var (kind, path) in installed)
+        {
+            var item = new ComboBoxItem { Content = SftpLauncher.DisplayName(kind), Tag = kind };
+            ToolTipService.SetToolTip(item, path);
+            SftpClientBox.Items.Add(item);
+            if (kind == chosen)
+                SftpClientBox.SelectedItem = item;
+        }
+        _loading = false;
+
+        SftpClientRow.Visibility = installed.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        var missing = Enum.GetValues<SftpClientKind>().Where(k => !installed.ContainsKey(k)).ToList();
+        SftpDownloads.Content = missing.Count == 0
+            ? null
+            : MainWindow.SftpDownloadLinks(
+                installed.Count == 0
+                    ? "Nenhum cliente SFTP encontrado. Instale um dos clientes abaixo para usar “Abrir SFTP” nas conexões SSH."
+                    : "Outros clientes suportados:",
+                missing);
+    }
+
+    private void SftpClient_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || SftpClientBox.SelectedItem is not ComboBoxItem { Tag: SftpClientKind kind })
+            return;
+        App.Settings.PreferredSftpClient = kind;
+        SaveSettings();
+    }
+
     private void CheckUpdates_Toggled(object sender, RoutedEventArgs e)
     {
         if (_loading)

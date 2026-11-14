@@ -327,6 +327,63 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// "Abrir SFTP" de uma conexão SSH: usa o cliente preferido (ou o primeiro instalado) e,
+    /// se nenhum estiver instalado, explica e mostra onde baixar.
+    /// </summary>
+    public async Task OpenSftpAsync(Connection? c)
+    {
+        if (c is null)
+            return;
+
+        var installed = SftpLauncher.FindInstalled();
+        if (SftpArguments.Choose(App.Settings.PreferredSftpClient, installed.Keys) is { } client)
+        {
+            ViewModel.OpenSftp(c, client, installed[client]);
+            return;
+        }
+
+        if (_dialogOpen)
+            return;
+        _dialogOpen = true;
+
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                XamlRoot = Content.XamlRoot,
+                Title = "Nenhum cliente SFTP encontrado",
+                Content = SftpDownloadLinks(
+                    "Para transferir arquivos, o RemoteMan abre um cliente SFTP já conectado ao servidor. "
+                    + "Instale um dos clientes abaixo e tente de novo:"),
+                CloseButtonText = "Fechar",
+                DefaultButton = ContentDialogButton.Close,
+            };
+            await dialog.ShowAsync();
+        }
+        finally
+        {
+            _dialogOpen = false;
+        }
+    }
+
+    /// <summary>Texto explicativo seguido de um link de download para cada cliente SFTP suportado.</summary>
+    public static StackPanel SftpDownloadLinks(string text, IEnumerable<SftpClientKind>? clients = null)
+    {
+        var panel = new StackPanel { Spacing = 4 };
+        panel.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4) });
+        foreach (var kind in clients ?? Enum.GetValues<SftpClientKind>())
+        {
+            panel.Children.Add(new HyperlinkButton
+            {
+                Content = $"Baixar {SftpLauncher.DisplayName(kind)}",
+                NavigateUri = SftpLauncher.DownloadUri(kind),
+                Padding = new Thickness(0, 2, 0, 2),
+            });
+        }
+        return panel;
+    }
+
     private async void QuickConnectAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
         args.Handled = true;

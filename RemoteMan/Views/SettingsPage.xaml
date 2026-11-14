@@ -111,6 +111,21 @@
 
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel Spacing="4">
+                        <TextBlock Text="SFTP" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,4" />
+                        <c:FieldRow
+                            x:Name="SftpClientRow"
+                            Label="Cliente SFTP"
+                            Description="Aberto por “Abrir SFTP” nas conexões SSH, já conectado ao servidor.">
+                            <c:FieldRow.Action>
+                                <ComboBox x:Name="SftpClientBox" MinWidth="220" SelectionChanged="SftpClient_SelectionChanged" />
+                            </c:FieldRow.Action>
+                        </c:FieldRow>
+                        <ContentPresenter x:Name="SftpDownloads" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="4">
                         <TextBlock Text="Atualizações" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,4" />
                         <c:FieldRow Label="Verificar ao abrir" Description="Consulta o GitHub no máximo uma vez por dia.">
                             <c:FieldRow.Action>
@@ -148,6 +163,8 @@
                                    Text="As senhas ficam no Gerenciador de Credenciais do Windows, protegidas pela sua conta. O arquivo de conexões não guarda nenhuma senha." />
                         <TextBlock Style="{StaticResource SecondaryTextStyle}" TextWrapping="Wrap"
                                    Text="Em conexões SSH sem chave privada, a senha salva é copiada para a área de transferência ao conectar (fora do histórico do Win+V). Cole no terminal com o botão direito." />
+                        <TextBlock Style="{StaticResource SecondaryTextStyle}" TextWrapping="Wrap"
+                                   Text="O mesmo vale para “Abrir SFTP”: a senha nunca é passada na linha de comando do cliente; ela fica na área de transferência para colar quando ele pedir." />
                     </StackPanel>
                 </Border>
 

@@ -44,6 +44,8 @@ public sealed partial class ConnectionItem : UserControl
 
     private void Connect_Click(object sender, RoutedEventArgs e) => App.ViewModel.ConnectTo(Connection);
 
+    private async void OpenSftp_Click(object sender, RoutedEventArgs e) => await App.MainWindow.OpenSftpAsync(Connection);
+
     // impede que o duplo clique no botão chegue à lista (que também conectaria)
     private void Connect_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e) => e.Handled = true;
 }

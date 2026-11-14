@@ -157,6 +157,9 @@ public sealed partial class ConnectionsPage : Page
         ViewModel.ConnectAll(group.ToList(), group.Key);
     }
 
+    private async void OpenSftp_Click(object sender, RoutedEventArgs e) =>
+        await App.MainWindow.OpenSftpAsync(ViewModel.Selected);
+
     private async void Delete_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel.Selected is not { } c)

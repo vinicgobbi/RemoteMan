@@ -27,4 +27,7 @@ public sealed class AppSettings
     public bool MonitorEnabled { get; set; }
 
     public int MonitorIntervalMinutes { get; set; } = 5;
+
+    /// <summary>Cliente usado em "Abrir SFTP" (null = o primeiro instalado).</summary>
+    public SftpClientKind? PreferredSftpClient { get; set; }
 }

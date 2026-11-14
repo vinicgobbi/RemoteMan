@@ -533,6 +533,52 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>Abre o cliente SFTP já conectado ao servidor SSH informado. Retorna se abriu.</summary>
+    /// <param name="exePath">Executável do cliente (ver <see cref="SftpLauncher.FindInstalled"/>).</param>
+    public bool OpenSftp(Connection? c, SftpClientKind client, string exePath)
+    {
+        if (c is null || c.Protocol != ConnectionProtocol.Ssh)
+            return false;
+
+        if (string.IsNullOrWhiteSpace(c.Host))
+        {
+            ShowStatus($"Informe o host de \"{c.Name}\" antes de conectar.", InfoBarSeverity.Warning);
+            return false;
+        }
+
+        if (Selected is { } editing && !TryPersistPendingPassword(editing))
+            return false;
+
+        try
+        {
+            var password = ReadPassword(c);
+            var command = SftpLauncher.Launch(c, CredentialFor(c)?.Username ?? c.Username, client, exePath);
+
+            var message = $"Abrindo {c.Name} no {SftpLauncher.DisplayName(client)}.";
+            // senha nunca vai na linha de comando: deixa ela pronta para colar quando o cliente pedir
+            if (password is not null && !command.KeyPassed)
+            {
+                CopyToClipboard(password);
+                message += " Senha copiada — cole quando o cliente pedir.";
+            }
+            if (command.Warnings.Count > 0)
+                message += $" Atenção: {string.Join("; ", command.Warnings)}.";
+
+            ShowStatus(message, command.Warnings.Count > 0 ? InfoBarSeverity.Warning : InfoBarSeverity.Success);
+
+            c.LastConnected = DateTime.Now;
+            c.ConnectCount++;
+            _autoSaveTimer.Stop();
+            SaveToDisk();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"Falha ao abrir o {SftpLauncher.DisplayName(client)}: {ex.Message}", InfoBarSeverity.Error);
+            return false;
+        }
+    }
+
     /// <summary>
     /// Aviso (começando com espaço) sobre túneis ignorados por erro ou com porta local já em uso; null se tudo certo.
     /// </summary>
