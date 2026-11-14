@@ -36,14 +36,15 @@ Windows, nunca em arquivo.
   alterações são salvas automaticamente (Ctrl+S grava na hora).
 - **Configurações**: efeito de fundo da janela (**Mica**, **Mica Alt** ou **Acrílico** com desfoque, com
   fallback automático onde o Windows não suporta), credenciais compartilhadas, monitoramento,
-  verificação de atualizações, usuário do Windows,
+  cliente SFTP preferido, verificação de atualizações, usuário do Windows,
   OpenSSH, Windows Terminal e caminho do arquivo de dados.
 - **Monitoramento contínuo** (opcional): verifica o status a cada 1, 5, 15 ou 30 minutos e mostra uma
   notificação do Windows quando um servidor favorito cai ou volta. Funciona com o app aberto.
 - **Aviso de nova versão**: ao abrir (no máximo uma vez por dia), o app consulta o último release no
   GitHub e, se houver versão nova, oferece baixar o instalador (ou o zip portátil, se for o caso).
 - Em todas as listas, clicar numa conexão abre os detalhes e o botão ▶ conecta. Na tela Conexões, o
-  duplo clique também conecta.
+  duplo clique também conecta. O clique direito abre um menu com **Conectar** e, em conexões SSH,
+  **Abrir SFTP**.
 - **RDP**
   - Abre o `mstsc` com um arquivo `.rdp` gerado na hora.
   - Login automático com a senha salva (credencial `TERMSRV/host`).
@@ -54,6 +55,19 @@ Windows, nunca em arquivo.
   - Abre uma nova aba no Windows Terminal ou, se ele não estiver instalado, uma janela do `ssh.exe`.
   - Suporta porta personalizada, chave privada (`-i`), jump host / ProxyJump (`-J`) e túneis local
     (`-L`), remoto (`-R`) e SOCKS (`-D`), com aviso de porta local já em uso.
+- **SFTP** (conexões SSH)
+  - **Abrir SFTP** abre um cliente gráfico já conectado, reaproveitando host, porta, usuário, chave,
+    jump host e credencial cadastrados.
+  - Clientes suportados: **WinSCP**, **FileZilla** e **Bitvise SSH Client**, detectados automaticamente.
+    O preferido é escolhido em Configurações; sem nenhum instalado, o app mostra onde baixar.
+
+    | Cliente | Chave privada | Jump host |
+    |---|---|---|
+    | WinSCP | só `.ppk` (usa `chave.ppk` ao lado da chave OpenSSH, se existir) | um servidor intermediário |
+    | FileZilla | configurada no próprio FileZilla | não suporta |
+    | Bitvise | gerenciador de chaves do Bitvise | não suporta por parâmetro |
+
+    Quando o cliente não aceita a chave ou o jump host, o app avisa ao abrir.
 - **Favoritos**, contador de uso, duplicar e excluir conexões, notas livres por conexão.
 
 ## Requisitos
@@ -64,6 +78,7 @@ Windows, nunca em arquivo.
   - Visual Studio 2022/2026 com a carga de trabalho **Desenvolvimento de aplicativos do Windows**.
 - Para conexões SSH: o cliente OpenSSH do Windows (já vem instalado no Windows 10/11 atual).
   O Windows Terminal é opcional.
+- Para **Abrir SFTP**: WinSCP, FileZilla ou Bitvise SSH Client (opcional).
 
 ## Como compilar e executar
 
@@ -139,6 +154,8 @@ As senhas são protegidas pelo DPAPI do usuário do Windows: só a sua conta, ne
 - **Senha em SSH:** o `ssh.exe` não aceita senha por argumento. Ao conectar uma sessão SSH sem chave privada,
   o RemoteMan copia a senha salva para a área de transferência, fora do histórico do Win+V. Basta colar no
   terminal com o botão direito.
+- **Senha no SFTP:** nunca é passada na linha de comando do cliente (ficaria visível na lista de processos).
+  Se a chave não for repassada ao cliente, a senha salva vai para a área de transferência, como no SSH.
 - **Usuário do Windows no RDP:** o login só é automático se a política "Permitir delegação de credenciais
   padrão" incluir `TERMSRV/*`. Normalmente quem configura essa política é o administrador do domínio. Sem
   ela, o `mstsc` pede a senha com o usuário já preenchido.
@@ -181,7 +198,8 @@ RemoteMan/
 │   ├── ConnectionAddress    # interpreta o endereço digitado (host:porta, usuario@host…)
 │   ├── ImportedConnection   # formato neutro de importação/exportação (sem senhas)
 │   ├── SharedCredential     # credencial compartilhada entre conexões
-│   └── AppSettings          # preferências (efeito de fundo)
+│   ├── SftpClientKind       # clientes SFTP suportados
+│   └── AppSettings          # preferências (efeito de fundo, cliente SFTP…)
 ├── Services/
 │   ├── Importers/           # leitura/escrita de .rdp, ssh config, PuTTY e backup .json
 │   ├── ImportSources        # lê os arquivos e o registro e chama os parsers
@@ -196,6 +214,8 @@ RemoteMan/
 │   ├── RdpLauncher          # gera o .rdp e abre o mstsc
 │   ├── SshLauncher          # abre o ssh no Windows Terminal ou console
 │   ├── SshArguments         # monta os argumentos do ssh (-p, -i, -J)
+│   ├── SftpLauncher         # detecta os clientes SFTP instalados e abre o escolhido
+│   ├── SftpArguments        # monta os argumentos do WinSCP, FileZilla e Bitvise
 │   ├── QuickSearch          # busca e ordenação da conexão rápida
 │   ├── UpdateChecker        # consulta o último release no GitHub
 │   ├── UpdateRelease        # compara versões e escolhe o arquivo de atualização
